@@ -78,6 +78,113 @@ function connect() {
 
 connect();
 
+// ─── Vault Functions ──────────────────────────────────────────────────────────
+async function fetchVault() {
+    const fileList = document.getElementById('file-list');
+    const learningOutput = document.getElementById('learning-output');
+    if (!fileList) return;
+    fileList.innerHTML = '<li style="opacity:0.5;">> Scanning wagons...</li>';
+    try {
+        const res = await fetch('/api/vault');
+        const data = await res.json();
+        const files = data.vault || [];
+        fileList.innerHTML = '';
+        if (files.length === 0) {
+            fileList.innerHTML = '<li style="opacity:0.5;">> No completions found in any Wagon.</li>';
+            return;
+        }
+        files.forEach(f => {
+            const li = document.createElement('li');
+            li.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.78rem;';
+            if (f.error) {
+                li.innerHTML = `<span style="opacity:0.4;">[${f.node_id}] ERROR: ${f.error}</span>`;
+            } else {
+                li.innerHTML = `
+                    <span style="color:var(--milenko-purple);font-size:0.7rem;white-space:nowrap;">[${f.node_id}]</span>
+                    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${f.filename}">${f.filename}</span>
+                    <button onclick="analyzeVaultFile('${f.node_id}','${f.filename}')" style="background:transparent;border:1px solid var(--riddle-green);color:var(--riddle-green);font-family:'Share Tech Mono',monospace;font-size:0.7rem;padding:2px 6px;cursor:pointer;">INGEST</button>
+                    <button onclick="deleteVaultFile('${f.node_id}','${f.filename}')" style="background:transparent;border:1px solid var(--wraith-red);color:var(--wraith-red);font-family:'Share Tech Mono',monospace;font-size:0.7rem;padding:2px 6px;cursor:pointer;">DEL</button>
+                `;
+            }
+            fileList.appendChild(li);
+        });
+        if (learningOutput) {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.style.color = 'var(--riddle-green)';
+            line.textContent = `> Vault refreshed. ${files.length} completion(s) found across ${new Set(files.map(f => f.node_id)).size} wagon(s).`;
+            learningOutput.appendChild(line);
+            learningOutput.scrollTop = learningOutput.scrollHeight;
+        }
+    } catch (e) {
+        fileList.innerHTML = `<li style="color:var(--wraith-red);">> Vault fetch error: ${e}</li>`;
+    }
+}
+
+async function analyzeVaultFile(nodeId, filename) {
+    const learningOutput = document.getElementById('learning-output');
+    if (learningOutput) {
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.style.color = 'var(--milenko-purple)';
+        line.textContent = `> Ingesting ${filename} from [${nodeId}]...`;
+        learningOutput.appendChild(line);
+        learningOutput.scrollTop = learningOutput.scrollHeight;
+    }
+    if (typeof playSFX === 'function') playSFX('click');
+    try {
+        // Fetch the file contents first
+        const contentsRes = await fetch(`http://${nodeId.replace('LXC-', '').split('-')[0]}:${nodeId.split('-')[1]}/api/completions/${filename}`);
+        const contents = await contentsRes.text();
+        // Send to learn endpoint
+        const res = await fetch(`/api/vault/${nodeId}/learn`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename, contents })
+        });
+        const data = await res.json();
+        if (learningOutput) {
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            div.style.cssText = 'color:#fff;margin-top:0.5rem;white-space:pre-wrap;word-break:break-word;';
+            div.innerHTML = `<span style="color:var(--riddle-green);">> COGNITION RESULT [${filename}]:</span>\n${data.analysis || data.error || JSON.stringify(data)}`;
+            learningOutput.appendChild(div);
+            learningOutput.scrollTop = learningOutput.scrollHeight;
+        }
+        if (typeof playSFX === 'function') playSFX('success');
+    } catch (e) {
+        if (learningOutput) {
+            const line = document.createElement('div');
+            line.className = 'log-line';
+            line.style.color = 'var(--wraith-red)';
+            line.textContent = `> Ingest error: ${e}`;
+            learningOutput.appendChild(line);
+        }
+    }
+}
+
+async function deleteVaultFile(nodeId, filename) {
+    try {
+        await fetch(`/api/vault/${nodeId}/${filename}`, { method: 'DELETE' });
+        if (typeof playSFX === 'function') playSFX('beep');
+        fetchVault(); // Refresh
+    } catch (e) {
+        console.error('Delete failed:', e);
+    }
+}
+
+// Wire up the Vault REFRESH button
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.files-panel button').forEach(btn => {
+        if (btn.textContent.trim() === 'REFRESH') {
+            btn.onclick = fetchVault;
+        }
+    });
+    // Auto-load vault on page start
+    fetchVault();
+});
+
+
 input.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
         const val = input.value.trim();

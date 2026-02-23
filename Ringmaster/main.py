@@ -151,6 +151,69 @@ async def dispatch_swarm(payload: SwarmTaskPayload):
     asyncio.create_task(fire_and_forget())
     return {"status": "dispatched", "target": target_id}
 
+# ─── VAULT PROXY ENDPOINTS ──────────────────────────────────────────────────
+# These proxy requests to the individual Wagon nodes' /api/completions endpoints
+
+@app.get("/api/vault")
+async def vault_aggregate():
+    """Fetch completion file lists from ALL connected wagons and aggregate them."""
+    result = []
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for node_id, node in active_nodes.items():
+            try:
+                res = await client.get(f"{node['url']}/api/completions")
+                data = res.json()
+                for fname in data.get("files", []):
+                    result.append({"node_id": node_id, "url": node["url"], "filename": fname})
+            except Exception as e:
+                result.append({"node_id": node_id, "url": node["url"], "error": str(e)})
+    return {"vault": result}
+
+@app.get("/api/vault/{node_id}")
+async def vault_node_files(node_id: str):
+    """Fetch completions from a specific Wagon node."""
+    if node_id not in active_nodes:
+        return {"error": f"Node '{node_id}' not found."}
+    url = active_nodes[node_id]["url"]
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.get(f"{url}/api/completions")
+            return res.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+@app.delete("/api/vault/{node_id}/{filename}")
+async def vault_delete_file(node_id: str, filename: str):
+    """Delete a completion file from a specific Wagon node's vault."""
+    if node_id not in active_nodes:
+        return {"error": f"Node '{node_id}' not found."}
+    url = active_nodes[node_id]["url"]
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            res = await client.delete(f"{url}/api/completions/{filename}")
+            return res.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+class LearnPayload(BaseModel):
+    filename: str
+    contents: str
+
+@app.post("/api/vault/{node_id}/learn")
+async def vault_learn(node_id: str, payload: LearnPayload):
+    """Proxy a completion file to a Wagon node's /api/learn endpoint for LLM ingestion."""
+    if node_id not in active_nodes:
+        return {"error": f"Node '{node_id}' not found."}
+    url = active_nodes[node_id]["url"]
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        try:
+            res = await client.post(f"{url}/api/learn", json={"filename": payload.filename, "contents": payload.contents})
+            return res.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+app.mount("/", StaticFiles(directory="public", html=True), name="public")
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -174,7 +237,7 @@ async def broadcast_to_ui(message: dict):
         except:
             pass
 
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
+
 
 @app.on_event("startup")
 async def startup_event():

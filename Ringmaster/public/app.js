@@ -199,13 +199,49 @@ async function deleteVaultFile(nodeId, filename) {
     }
 }
 
-// Wire up the Vault REFRESH button
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.files-panel button').forEach(btn => {
-        if (btn.textContent.trim() === 'REFRESH') {
-            btn.onclick = fetchVault;
+// ─── Global Self-Improve (Improve All Wagons) ────────────────────────────────
+async function improveAllWagons() {
+    const learningOutput = document.getElementById('learning-output');
+    const btn = document.getElementById('improve-all-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ IMPROVING...'; }
+    if (typeof playSFX === 'function') playSFX('click');
+
+    function log(msg, color = 'var(--milenko-purple)') {
+        if (!learningOutput) return;
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.style.cssText = `color:${color};white-space:pre-wrap;word-break:break-word;`;
+        line.textContent = msg;
+        learningOutput.appendChild(line);
+        learningOutput.scrollTop = learningOutput.scrollHeight;
+    }
+
+    log('> 🔄 Initiating global self-improvement across all connected wagons...');
+    try {
+        const res = await fetch('/api/self-improve/all', { method: 'POST' });
+        const data = await res.json();
+        if (data.error) {
+            log(`> ❌ ERROR: ${data.error}`, 'var(--wraith-red)');
+        } else {
+            log(`> ✅ Global improve fired. Watch the Faygo Shower for live output.`, 'var(--riddle-green)');
+            (data.results || []).forEach(r => {
+                log(`  [${r.node_id}] improved=${r.improved ?? 0} skipped=${r.skipped ?? 0} failed=${r.failed ?? 0}`, 'var(--riddle-green)');
+            });
         }
-    });
+    } catch (e) {
+        log(`> ❌ Fetch error: ${e}`, 'var(--wraith-red)');
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 IMPROVE ALL WAGONS'; }
+}
+
+// Wire up Vault buttons by ID (DOMContentLoaded fires after scripts load)
+document.addEventListener('DOMContentLoaded', () => {
+    const refreshBtn = document.getElementById('vault-refresh-btn');
+    if (refreshBtn) refreshBtn.onclick = fetchVault;
+
+    const improveBtn = document.getElementById('improve-all-btn');
+    if (improveBtn) improveBtn.onclick = improveAllWagons;
+
     // Auto-load vault on page start
     fetchVault();
 });

@@ -901,8 +901,14 @@
                         <div class="files-panel"
                             style="flex: 1; background: rgba(0,0,0,0.8); border: 1px solid var(--riddle-green); padding: 1rem; color: #fff;">
                             <h4 style="color: var(--riddle-green); margin-top: 0;">_ VAULT: /completions/</h4>
-                            <button class="hatchet-btn"
-                                style="padding: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; border-color: var(--riddle-green); color: var(--riddle-green);">REFRESH</button>
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+                                <button class="hatchet-btn" id="vault-refresh-btn"
+                                    style="padding: 0.5rem; font-size: 0.8rem; border-color: var(--riddle-green); color: var(--riddle-green);">REFRESH
+                                    VAULT</button>
+                                <button class="hatchet-btn" id="improve-all-btn"
+                                    style="padding: 0.5rem; font-size: 0.8rem; border-color: var(--milenko-purple); color: var(--milenko-purple);">🔄
+                                    IMPROVE ALL WAGONS</button>
+                            </div>
                             <ul id="file-list"
                                 style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
                                 <li>> Global Vault aggregate.</li>

@@ -40,11 +40,14 @@ exports.SwarmBuilder = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const LLMFactory_1 = require("../providers/LLMFactory");
 const SkillLoader_1 = require("../skills/SkillLoader");
+const MemoryEngine_1 = require("../memory/MemoryEngine");
+const WebSocketServer_1 = require("../server/WebSocketServer");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const child_process_1 = require("child_process");
 const util_1 = require("util");
-const WebSocketServer_1 = require("../server/WebSocketServer");
+const HiveMind_1 = require("./HiveMind");
+const SelfImprovementEngine_1 = require("../services/SelfImprovementEngine");
 const execAsync = (0, util_1.promisify)(child_process_1.exec);
 class SwarmBuilder {
     objective;
@@ -56,48 +59,45 @@ class SwarmBuilder {
     }
     async delegateToSwarm(tasks) {
         if (!tasks || tasks.length === 0) {
-            console.log(chalk_1.default.red('No valid swarm tasks generated from the debate. Aborting build.'));
+            console.log(chalk_1.default.red('No valid swarm tasks generated from the debate. Aborting.'));
+            (0, WebSocketServer_1.broadcastLog)('SwarmBuilder', 'No tasks generated — swarm aborted.');
             return;
         }
-        console.log(chalk_1.default.blue(`Launching ${tasks.length} parallel modules into the swarm...`));
-        await Promise.all(tasks.map(async (task) => {
-            const target = task.command ? `[EXEC: ${task.command}]` : `[FILE: ${task.filename}]`;
-            console.log(chalk_1.default.yellow(`- [${task.provider}] started task: ${task.name} -> ${target}`));
+        console.log(chalk_1.default.blue(`\nLaunching ${tasks.length} parallel modules into the swarm...`));
+        (0, WebSocketServer_1.broadcastLog)('SwarmBuilder', `Launching ${tasks.length} parallel swarm tasks...`);
+        const results = await Promise.all(tasks.map(async (task) => {
+            const target = task.command ? `[EXEC: ${task.command}]` : `[FILE: ${task.filename || '(no file)'}]`;
+            console.log(chalk_1.default.yellow(`- [${task.provider}] started: ${task.name} -> ${target}`));
+            (0, WebSocketServer_1.broadcastLog)(task.provider, `Started: ${task.name} → ${target}`);
             try {
-                // If it's a shell command task
+                // ── Shell Command Task ──────────────────────────────────────────────────
                 if (task.command) {
                     const llm = LLMFactory_1.LLMFactory.getProvider(task.provider);
-                    const cmdPrompt = `The overarching objective is: "${this.objective}". 
-Task instructions: ${task.instructions}.
-Based on this, what is the exact, safe terminal command to execute? Return STRICTLY the command string only.`;
                     let finalCmd = task.command;
-                    // If the command is a placeholder or needs AI generation, let the LLM refine it
-                    if (task.command === "GENERATE" || task.command === "AUTO") {
-                        const generatedCmd = await llm.generateResponse(cmdPrompt, "You are an expert devops terminal bot. Output strictly the command string.");
+                    if (task.command === 'GENERATE' || task.command === 'AUTO') {
+                        const cmdPrompt = `Objective: "${this.objective}". Task: ${task.instructions}. Return ONLY the exact safe shell command string to execute. No explanation.`;
+                        const generatedCmd = await llm.generateResponse(cmdPrompt, 'You are an expert DevOps terminal bot. Output ONLY the command string.');
                         finalCmd = generatedCmd.replace(/`/g, '').trim();
                         console.log(chalk_1.default.dim(`  [${task.provider}] Generated command: ${finalCmd}`));
+                        (0, WebSocketServer_1.broadcastLog)(task.provider, `Generated command: ${finalCmd}`);
                     }
-                    if (finalCmd.startsWith('[') && finalCmd.includes('Error]')) {
-                        throw new Error(`LLM provider failed to generate command: ${finalCmd}`);
+                    // Safety: detect LLM error strings that leaked through
+                    if (finalCmd.startsWith('\u001b[31m') || finalCmd.toLowerCase().includes('error')) {
+                        throw new Error(`LLM returned an error instead of a command: ${finalCmd.substring(0, 100)}`);
                     }
-                    // Sandbox Execution: We are natively running ON the Proxmox Container now!
                     const sessionName = `swarm_${task.provider.toLowerCase()}_${Date.now()}`;
-                    const safeCmd = finalCmd.replace(/"/g, '\\"');
-                    // We run it inside a local tmux session directly
-                    const tmuxCommand = `tmux new-session -d -s ${sessionName} "bash -c \\"${safeCmd}\\""`;
-                    (0, WebSocketServer_1.broadcastLog)(task.provider, `Deploying tmux session [${sessionName}] natively on Proxmox LXC 160.`);
-                    // We don't await the full command since it runs detached, letting long tasks survive 3 months!
-                    await execAsync(tmuxCommand);
-                    console.log(chalk_1.default.green(`✓ [${task.provider}] deployed local sandboxed shell task ${task.name}.`));
-                    return; // Skip file generation
+                    const safeCmd = finalCmd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+                    const tmuxCmd = `tmux new-session -d -s ${sessionName} "bash -c \\"${safeCmd}\\""`;
+                    (0, WebSocketServer_1.broadcastLog)(task.provider, `Deploying tmux session [${sessionName}]`);
+                    await execAsync(tmuxCmd);
+                    console.log(chalk_1.default.green(`✓ [${task.provider}] Shell task deployed: ${task.name}`));
+                    (0, WebSocketServer_1.broadcastLog)(task.provider, `✓ Shell task complete: ${task.name}`);
+                    return { task: task.name, success: true, type: 'command' };
                 }
-                // If it's a file generation task
+                // ── File Generation Task ────────────────────────────────────────────────
                 const llm = LLMFactory_1.LLMFactory.getProvider(task.provider);
-                const codePrompt = `Write the code for the following task based on the overall objective: "${this.objective}". 
-Instructions: ${task.instructions}. 
-Return strictly ONLY the raw code string, no markdown fences, backticks, or other formatting.`;
-                let sysContext = "You are an expert autonomous code generator snippet bot.";
-                // Mount specialized skill contexts dynamically requested for this task
+                let sysContext = 'You are an expert autonomous code generator. Output ONLY raw code, no markdown fences, no backticks, no explanatory text.';
+                // Inject specialized skill contexts
                 if (task.skills && task.skills.length > 0) {
                     console.log(chalk_1.default.dim(`  Injecting skills for ${task.name}: ${task.skills.join(', ')}`));
                     for (const s of task.skills) {
@@ -107,26 +107,64 @@ Return strictly ONLY the raw code string, no markdown fences, backticks, or othe
                         }
                     }
                 }
-                const codeResult = await llm.generateResponse(codePrompt, sysContext);
-                // Write code
-                if (task.filename) {
-                    // Force the output to the /completions directory
-                    const safeFilename = path.basename(task.filename); // Ignore whatever path the LLM generated and just use the filename
-                    const outPath = path.join(process.cwd(), 'completions', safeFilename);
-                    // ensure dir exists
-                    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-                    // strip out any potential markdown fences that the LLM stubbornly returns
-                    const cleanCode = codeResult.replace(/^```(\w+)?\n/i, '').replace(/```$/i, '');
-                    fs.writeFileSync(outPath, cleanCode, 'utf8');
-                    (0, WebSocketServer_1.broadcastLog)(task.provider, `Saved completed module to VAULT: /completions/${safeFilename}`);
-                    console.log(chalk_1.default.green(`✓ [${task.provider}] completed ${task.name}. Saved to completions/${safeFilename}`));
+                (0, WebSocketServer_1.broadcastLog)(task.provider, `Deploying HiveMind Sub-Swarm for ${task.filename || task.name}...`);
+                const codeResult = await HiveMind_1.HiveMind.executeSubSwarm(task, sysContext);
+                // Detect LLM error string
+                if (codeResult.startsWith('\u001b[31m') || codeResult.toLowerCase().startsWith('[') && codeResult.toLowerCase().includes('error')) {
+                    throw new Error(`LLM returned an error instead of code: ${codeResult.substring(0, 150)}`);
                 }
+                if (task.filename) {
+                    // Force output into /completions/ with collision-safe naming
+                    const baseName = path.basename(task.filename);
+                    const nameWithoutExt = baseName.replace(/\.[^.]+$/, '');
+                    const ext = path.extname(baseName);
+                    const safeFilename = `${nameWithoutExt}_${Date.now()}${ext}`;
+                    const outPath = path.join(process.cwd(), 'completions', safeFilename);
+                    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+                    // Strip any stubborn markdown fences
+                    const cleanCode = codeResult
+                        .replace(/^```[\w]*\n?/gim, '')
+                        .replace(/```$/gim, '')
+                        .trim();
+                    fs.writeFileSync(outPath, cleanCode, 'utf8');
+                    console.log(chalk_1.default.green(`✓ [${task.provider}] ${task.name} saved → completions/${safeFilename}`));
+                    (0, WebSocketServer_1.broadcastLog)(task.provider, `✓ Saved module to VAULT: /completions/${safeFilename}`);
+                    // FIXED: Auto-absorb completed module into MemoryEngine's short-term memory
+                    try {
+                        await MemoryEngine_1.memoryEngine.absorbCompletion(safeFilename, cleanCode);
+                        (0, WebSocketServer_1.broadcastLog)('MemoryEngine', `Absorbed ${safeFilename} into short-term memory.`);
+                    }
+                    catch (memErr) {
+                        console.log(chalk_1.default.dim(`  [MemoryEngine] Absorption skipped (Redis unavailable): ${memErr}`));
+                    }
+                    return { task: task.name, success: true, type: 'file', filename: safeFilename };
+                }
+                return { task: task.name, success: true, type: 'instructions-only' };
             }
             catch (err) {
-                console.log(chalk_1.default.red(`✗ [${task.provider}] failed task ${task.name}. Error: ${err}`));
+                const errMsg = `${err}`;
+                console.log(chalk_1.default.red(`✗ [${task.provider}] failed: ${task.name} — ${errMsg}`));
+                (0, WebSocketServer_1.broadcastLog)(task.provider, `✗ FAILED: ${task.name} — ${errMsg.substring(0, 200)}`);
+                return { task: task.name, success: false, error: errMsg };
             }
         }));
-        console.log(chalk_1.default.bold.green('\n[Swarm parallel execution complete. All modules merged into workspace.]'));
+        const succeeded = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+        console.log(chalk_1.default.bold.green(`\n[Swarm Complete] ${succeeded}/${tasks.length} tasks succeeded. ${failed} failed.`));
+        (0, WebSocketServer_1.broadcastLog)('SwarmBuilder', `Swarm complete: ${succeeded}/${tasks.length} succeeded, ${failed} failed.`);
+        // ── Auto Self-Improvement ─────────────────────────────────────────────────
+        // After tasks complete, automatically run a quality-check-and-improve cycle
+        // on all generated completions. Closes the Generate → Improve → Apply loop.
+        if (succeeded > 0) {
+            (0, WebSocketServer_1.broadcastLog)('SelfImprove', '🔄 Auto-triggering self-improvement cycle on new completions...');
+            const engine = new SelfImprovementEngine_1.SelfImprovementEngine(process.cwd());
+            engine.runCycle().then(report => {
+                (0, WebSocketServer_1.broadcastLog)('SelfImprove', `✅ Auto-improve done — ${report.improved} improved, ${report.skipped} skipped.`);
+            }).catch(err => {
+                (0, WebSocketServer_1.broadcastLog)('SelfImprove', `⚠ Auto-improve skipped: ${err}`);
+            });
+        }
+        return results;
     }
 }
 exports.SwarmBuilder = SwarmBuilder;

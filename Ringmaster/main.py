@@ -212,6 +212,53 @@ async def vault_learn(node_id: str, payload: LearnPayload):
         except Exception as e:
             return {"error": str(e)}
 
+# ─── SELF-IMPROVEMENT ENDPOINTS ──────────────────────────────────────────────
+
+@app.post("/api/self-improve/{node_id}")
+async def self_improve_node(node_id: str):
+    """Trigger a self-improvement cycle on a specific Wagon node."""
+    if node_id not in active_nodes:
+        return {"error": f"Node '{node_id}' not found."}
+    url = active_nodes[node_id]["url"]
+    await broadcast_to_ui({"type": "terminal_log", "node_id": node_id, "log": f"> Self-improvement cycle triggered on {node_id}..."})
+    async with httpx.AsyncClient(timeout=300.0) as client:
+        try:
+            res = await client.post(f"{url}/api/self-improve")
+            return res.json()
+        except Exception as e:
+            return {"error": str(e)}
+
+@app.post("/api/self-improve/all")
+async def self_improve_all():
+    """Fan out a self-improvement cycle to ALL connected Wagon nodes concurrently."""
+    if not active_nodes:
+        return {"error": "No connected Wagon nodes."}
+
+    await broadcast_to_ui({"type": "terminal_log", "node_id": "RINGMASTER", "log": f"> 🔄 Global self-improvement initiated on {len(active_nodes)} wagon(s)..."})
+
+    async def improve_node(node_id: str, url: str):
+        try:
+            async with httpx.AsyncClient(timeout=300.0) as client:
+                res = await client.post(f"{url}/api/self-improve")
+                data = res.json()
+                await broadcast_to_ui({
+                    "type": "terminal_log",
+                    "node_id": node_id,
+                    "log": f"> [IMPROVE] {node_id}: improved={data.get('improved',0)}, skipped={data.get('skipped',0)}, failed={data.get('failed',0)}"
+                })
+                return {"node_id": node_id, **data}
+        except Exception as e:
+            await broadcast_to_ui({"type": "terminal_log", "node_id": node_id, "log": f"> [IMPROVE] {node_id} ERROR: {e}"})
+            return {"node_id": node_id, "error": str(e)}
+
+    results = await asyncio.gather(*[
+        improve_node(nid, ninfo["url"])
+        for nid, ninfo in active_nodes.items()
+    ])
+
+    total_improved = sum(r.get("improved", 0) for r in results if isinstance(r, dict))
+    await broadcast_to_ui({"type": "terminal_log", "node_id": "RINGMASTER", "log": f"> ✅ Global improve complete. {total_improved} file(s) improved across {len(active_nodes)} wagon(s)."})
+    return {"status": "complete", "results": list(results), "total_improved": total_improved}
 
 
 @app.websocket("/ws")

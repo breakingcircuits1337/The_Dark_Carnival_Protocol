@@ -9,6 +9,7 @@ import { initializeOrchestrator, RoundTableOverrides } from '../orchestrator/Rou
 import { LLMFactory } from '../providers/LLMFactory';
 import { memoryEngine } from '../memory/MemoryEngine';
 import { SwarmBuilder, SwarmTask } from '../orchestrator/SwarmBuilder';
+import { SelfImprovementEngine } from '../services/SelfImprovementEngine';
 
 let ioInstance: Server | null = null;
 let currentPendingPlan: { tasks: SwarmTask[], objective: string, overrides: RoundTableOverrides } | null = null;
@@ -201,6 +202,26 @@ Output strictly JSON, no markdown.`;
             console.error(chalk.red('[API Trigger] Execution failed: ' + e));
             res.status(500).json({ error: e.toString() });
         }
+    });
+
+    // Self-Improvement Cycle — wired to Ringmaster Hub "IMPROVE" button
+    app.post('/api/self-improve', async (req, res) => {
+        const nodeServerUrl = `http://localhost:${port}`;
+        const engine = new SelfImprovementEngine(process.cwd(), nodeServerUrl);
+
+        broadcastLog('SelfImprove', '🔄 Self-improvement cycle triggered via Ringmaster Hub...');
+        ioInstance?.emit('self-improve-started');
+
+        // Fire-and-forget: stream progress via broadcastLog
+        engine.runCycle().then(report => {
+            ioInstance?.emit('self-improve-done', report);
+            broadcastLog('SelfImprove', `✅ Cycle complete — ${report.improved} improved, ${report.skipped} skipped, ${report.failed} failed.`);
+        }).catch(err => {
+            broadcastLog('SelfImprove', `❌ Cycle error: ${err}`);
+            ioInstance?.emit('self-improve-done', { error: String(err) });
+        });
+
+        res.json({ status: 'running', message: 'Self-improvement cycle started. Watch the Meta-Cognition Log.' });
     });
 
     io.on('connection', (socket) => {

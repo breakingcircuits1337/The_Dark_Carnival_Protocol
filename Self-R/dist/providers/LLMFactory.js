@@ -47,67 +47,56 @@ dotenv.config();
 class ClaudesonProvider {
     name = 'Claudeson';
     async generateResponse(prompt, context = '') {
-        try {
-            // Claudeson 2026 is expected to run locally via a bridge API (FastAPI) on port 8000
-            const response = await fetch('http://127.0.0.1:8000/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: 'claudeson-2026',
-                    messages: [
-                        { role: 'system', content: context },
-                        { role: 'user', content: prompt }
-                    ],
-                    // Trigger Claudeson's internal Tree Search planning
-                    planning_horizon: 3
-                })
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            const data = await response.json();
-            return data.choices[0].message.content || '';
+        // Claudeson 2026 runs locally via a bridge API (FastAPI) on port 8000
+        const response = await fetch('http://127.0.0.1:8000/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claudeson-2026',
+                messages: [
+                    { role: 'system', content: context },
+                    { role: 'user', content: prompt }
+                ],
+                planning_horizon: 3
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`[Claudeson] HTTP ${response.status}: ${response.statusText} — ensure the Claudeson 2026 Python API is running on port 8000.`);
         }
-        catch (error) {
-            return chalk_1.default.red(`[Claudeson Error]: Ensure the Claudeson 2026 Python API is running on port 8000. ${error}`);
-        }
+        const data = await response.json();
+        return data.choices[0].message.content || '';
     }
 }
 exports.ClaudesonProvider = ClaudesonProvider;
 class KimiProvider {
     name = 'Kimi';
     async generateResponse(prompt, context = '') {
-        try {
-            const endpoint = process.env.KIMI_ENDPOINT;
-            const apiKey = process.env.AZURE_API_KEY || process.env.KIMI_API_KEY;
-            if (!endpoint || !apiKey) {
-                throw new Error("KIMI_ENDPOINT and AZURE_API_KEY must be set in .env");
-            }
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'api-key': apiKey
-                },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: context },
-                        { role: 'user', content: prompt }
-                    ],
-                    max_tokens: 4096,
-                    temperature: 0.7
-                })
-            });
-            if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errText}`);
-            }
-            const data = await response.json();
-            return data.choices[0].message.content || '';
+        const endpoint = process.env.KIMI_ENDPOINT;
+        const apiKey = process.env.AZURE_API_KEY || process.env.KIMI_API_KEY;
+        if (!endpoint || !apiKey) {
+            throw new Error('[Kimi] KIMI_ENDPOINT and AZURE_API_KEY must be set in .env');
         }
-        catch (error) {
-            return chalk_1.default.red(`[Kimi Error]: ${error}`);
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': apiKey
+            },
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: context },
+                    { role: 'user', content: prompt }
+                ],
+                max_tokens: 4096,
+                temperature: 0.7
+            })
+        });
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`[Kimi] HTTP ${response.status}: ${errText}`);
         }
+        const data = await response.json();
+        return data.choices[0].message.content || '';
     }
 }
 exports.KimiProvider = KimiProvider;
@@ -115,14 +104,9 @@ class GeminiProvider {
     name = 'Gemini';
     genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
     async generateResponse(prompt, context = '') {
-        try {
-            const model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
-            const result = await model.generateContent(`${context}\n\n${prompt}`);
-            return result.response.text();
-        }
-        catch (error) {
-            return chalk_1.default.red(`[Gemini Error]: ${error}`);
-        }
+        const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+        const result = await model.generateContent(`${context}\n\n${prompt}`);
+        return result.response.text();
     }
 }
 exports.GeminiProvider = GeminiProvider;
@@ -130,19 +114,14 @@ class ClaudeProvider {
     name = 'Claude';
     anthropic = new sdk_1.default({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
     async generateResponse(prompt, context = '') {
-        try {
-            const msg = await this.anthropic.messages.create({
-                model: 'claude-3-5-sonnet-20241022',
-                max_tokens: 4096,
-                system: context,
-                messages: [{ role: 'user', content: prompt }]
-            });
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return msg.content[0].text;
-        }
-        catch (error) {
-            return chalk_1.default.red(`[Claude Error]: ${error}`);
-        }
+        const msg = await this.anthropic.messages.create({
+            model: 'claude-opus-4-5',
+            max_tokens: 4096,
+            system: context,
+            messages: [{ role: 'user', content: prompt }]
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return msg.content[0].text;
     }
 }
 exports.ClaudeProvider = ClaudeProvider;
@@ -255,19 +234,15 @@ exports.DeepSeekProvider = DeepSeekProvider;
 class OllamaProvider {
     name = 'Ollama';
     async generateResponse(prompt, context = '') {
-        try {
-            const response = await ollama_1.default.chat({
-                model: 'llama3', // default local model assumption
-                messages: [
-                    { role: 'system', content: context },
-                    { role: 'user', content: prompt }
-                ],
-            });
-            return response.message.content;
-        }
-        catch (error) {
-            return chalk_1.default.red(`[Ollama Error]: Ensure Ollama is running locally. ${error}`);
-        }
+        const modelName = process.env.OLLAMA_MODEL || 'llama3.2';
+        const response = await ollama_1.default.chat({
+            model: modelName,
+            messages: [
+                { role: 'system', content: context },
+                { role: 'user', content: prompt }
+            ],
+        });
+        return response.message.content;
     }
 }
 exports.OllamaProvider = OllamaProvider;
@@ -328,25 +303,24 @@ class GroqProvider {
         baseURL: 'https://api.groq.com/openai/v1'
     });
     async generateResponse(prompt, context = '') {
-        try {
-            const completion = await this.openai.chat.completions.create({
-                messages: [
-                    { role: 'system', content: context },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'llama3-70b-8192',
-            });
-            return completion.choices[0].message.content || '';
-        }
-        catch (error) {
-            return chalk_1.default.red(`[Groq Error]: ${error}`);
-        }
+        const completion = await this.openai.chat.completions.create({
+            messages: [
+                { role: 'system', content: context },
+                { role: 'user', content: prompt }
+            ],
+            model: 'llama-3.3-70b-versatile',
+        });
+        return completion.choices[0].message.content || '';
     }
 }
 exports.GroqProvider = GroqProvider;
 class LLMFactory {
-    static getAvailableProviders() {
-        const available = ['Ollama', 'Claudeson']; // Local fallbacks
+    static getAvailableProvidersSync() {
+        const available = [];
+        if (process.env.OLLAMA_HOST)
+            available.push('Ollama');
+        if (process.env.CLAUDESON_URL)
+            available.push('Claudeson');
         if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '')
             available.push('Gemini');
         if (process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY.trim() !== '')
@@ -362,6 +336,42 @@ class LLMFactory {
         if (process.env.AZURE_API_KEY && process.env.DEEPSEEK_ENDPOINT)
             available.push('DeepSeek');
         return available;
+    }
+    static async getAvailableProviders() {
+        const available = LLMFactory.getAvailableProvidersSync();
+        const healthyProviders = [];
+        for (const providerName of available) {
+            if (providerName === 'Ollama') {
+                try {
+                    const ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
+                    const response = await fetch(`${ollamaHost}/api/tags`, { signal: AbortSignal.timeout(2000) }); // 2-second timeout
+                    if (response.ok) {
+                        healthyProviders.push('Ollama');
+                    }
+                }
+                catch (error) {
+                    // console.warn(`Ollama health check failed: ${error}`);
+                }
+            }
+            else if (providerName === 'Claudeson') {
+                try {
+                    const claudesonUrl = process.env.CLAUDESON_URL;
+                    if (claudesonUrl) {
+                        const response = await fetch(`${claudesonUrl}/health`, { signal: AbortSignal.timeout(2000) }); // 2-second timeout
+                        if (response.ok) {
+                            healthyProviders.push('Claudeson');
+                        }
+                    }
+                }
+                catch (error) {
+                    // console.warn(`Claudeson health check failed: ${error}`);
+                }
+            }
+            else {
+                healthyProviders.push(providerName);
+            }
+        }
+        return healthyProviders;
     }
     static getProvider(name) {
         switch (name.toLowerCase()) {

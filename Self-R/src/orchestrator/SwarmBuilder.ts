@@ -8,6 +8,7 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { HiveMind } from './HiveMind';
+import { SelfImprovementEngine } from '../services/SelfImprovementEngine';
 
 const execAsync = promisify(exec);
 
@@ -146,6 +147,19 @@ export class SwarmBuilder {
 
         console.log(chalk.bold.green(`\n[Swarm Complete] ${succeeded}/${tasks.length} tasks succeeded. ${failed} failed.`));
         broadcastLog('SwarmBuilder', `Swarm complete: ${succeeded}/${tasks.length} succeeded, ${failed} failed.`);
+
+        // ── Auto Self-Improvement ─────────────────────────────────────────────────
+        // After tasks complete, automatically run a quality-check-and-improve cycle
+        // on all generated completions. Closes the Generate → Improve → Apply loop.
+        if (succeeded > 0) {
+            broadcastLog('SelfImprove', '🔄 Auto-triggering self-improvement cycle on new completions...');
+            const engine = new SelfImprovementEngine(process.cwd());
+            engine.runCycle().then(report => {
+                broadcastLog('SelfImprove', `✅ Auto-improve done — ${report.improved} improved, ${report.skipped} skipped.`);
+            }).catch(err => {
+                broadcastLog('SelfImprove', `⚠ Auto-improve skipped: ${err}`);
+            });
+        }
 
         return results;
     }

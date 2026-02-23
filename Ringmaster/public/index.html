@@ -329,6 +329,135 @@
             margin-right: 12px;
         }
 
+        /* Hologram Avatar */
+        .hologram-avatar-container {
+            perspective: 1000px;
+            margin: 0 2rem;
+            display: flex;
+            gap: 15px;
+            z-index: 20;
+        }
+
+        .hologram-avatar {
+            width: 80px;
+            height: 110px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: floaty 4s ease-in-out infinite, rotate-holo 10s linear infinite;
+            border: 2px solid transparent;
+            border-image: linear-gradient(45deg, var(--riddle-green), var(--milenko-purple), var(--wraith-red)) 1;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.4), 0 0 30px rgba(157, 0, 255, 0.2);
+            transition: all 0.2s;
+        }
+
+        .hologram-avatar:nth-child(2) {
+            animation-delay: -1s, -2.5s;
+        }
+
+        .hologram-avatar:nth-child(3) {
+            animation-delay: -2s, -5s;
+        }
+
+        .hologram-avatar:nth-child(4) {
+            animation-delay: -3s, -7.5s;
+        }
+
+        .hologram-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: drop-shadow(0 0 10px var(--riddle-green)) contrast(1.2) saturation(1.5);
+            opacity: 0.9;
+        }
+
+        .hologram-avatar .scanline {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.8);
+            opacity: 0.5;
+            animation: scan 3s linear infinite;
+            box-shadow: 0 0 10px #fff, 0 0 20px var(--riddle-green);
+        }
+
+        .hologram-avatar .glitch-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            mix-blend-mode: overlay;
+            animation: flicker 0.15s infinite;
+        }
+
+        .hologram-avatar:hover {
+            transform: scale(1.15) !important;
+            z-index: 50;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8), 0 0 60px rgba(157, 0, 255, 0.6);
+            border-image: linear-gradient(45deg, #FF0000, #9d00ff, #39FF14) 1;
+            animation-play-state: paused;
+        }
+
+        .hologram-avatar:hover .glitch-overlay {
+            animation: flicker 0.05s infinite !important;
+            background-size: 100% 2px, 12px 100%;
+        }
+
+        .hologram-avatar:hover .scanline {
+            animation: scan 0.5s linear infinite !important;
+            height: 10px;
+            background: var(--wraith-red);
+            box-shadow: 0 0 20px var(--wraith-red);
+        }
+
+        @keyframes floaty {
+
+            0%,
+            100% {
+                transform: translateY(0) rotateX(5deg) rotateY(10deg);
+            }
+
+            50% {
+                transform: translateY(-10px) rotateX(-5deg) rotateY(-10deg);
+            }
+        }
+
+        @keyframes rotate-holo {
+            from {
+                filter: hue-rotate(0deg);
+            }
+
+            to {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        @keyframes scan {
+            0% {
+                top: -10%;
+            }
+
+            100% {
+                top: 110%;
+            }
+        }
+
+        @keyframes flicker {
+            0% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.9;
+            }
+        }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -340,7 +469,36 @@
 <body>
 
     <header class="header">
-        <h1>THE DARK CARNIVAL // THE RINGMASTER</h1>
+        <div>
+            <h1>THE DARK CARNIVAL</h1>
+            <h2
+                style="margin: 0; font-family: 'Share Tech Mono', monospace; color: var(--riddle-green); font-size: 1rem; letter-spacing: 2px;">
+                // THE RINGMASTER COMMAND</h2>
+        </div>
+
+        <div class="hologram-avatar-container">
+            <div class="hologram-avatar">
+                <img src="avatar.png" alt="Cyber Carnival Joker">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-ringmaster.png" alt="The Ringmaster">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-wraith.png" alt="The Wraith">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-milenko.png" alt="The Great Milenko">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+        </div>
+
         <div class="carnival-stats">CARNIVAL GROUNDS: ACTIVE // WAGONS: <span id="node-count">0</span>
         </div>
     </header>

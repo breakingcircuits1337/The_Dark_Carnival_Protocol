@@ -212,7 +212,7 @@ async def vault_learn(node_id: str, payload: LearnPayload):
         except Exception as e:
             return {"error": str(e)}
 
-app.mount("/", StaticFiles(directory="public", html=True), name="public")
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -238,6 +238,10 @@ async def broadcast_to_ui(message: dict):
             pass
 
 
+
+# Static files mount MUST be last — mounting before routes causes StaticFiles to intercept
+# WebSocket upgrades and all API requests, crashing the entire server.
+app.mount("/", StaticFiles(directory="public", html=True), name="public")
 
 @app.on_event("startup")
 async def startup_event():

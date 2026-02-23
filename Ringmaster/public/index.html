@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE RINGMASTER // SWARM COMMAND</title>
+    <style>
+        :root {
+            --riddle-green: #00ff00;
+            --milenko-purple: #8b00ff;
+            --wraith-red: #ff0000;
+            --bg-color: #050505;
+            --panel-bg: rgba(10, 10, 10, 0.85);
+            --neon-glow: 0 0 10px;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: #fff;
+            font-family: 'JetBrains Mono', monospace;
+            background-image:
+                linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 15px 20px;
+            border-bottom: 2px solid var(--milenko-purple);
+            box-shadow: var(--neon-glow) var(--milenko-purple);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(139, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 100%);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #fff;
+            text-shadow: 2px 2px 0 var(--milenko-purple);
+        }
+
+        .cctv-wall {
+            flex: 1;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            overflow-y: auto;
+            align-content: start;
+        }
+
+        .node-card {
+            background: var(--panel-bg);
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            position: relative;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+        }
+
+        .node-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--riddle-green);
+        }
+
+        .node-card[data-status="IDLE"]::before {
+            background: #555;
+        }
+
+        .node-card[data-status="DRAFTING"]::before {
+            background: var(--milenko-purple);
+            box-shadow: var(--neon-glow) var(--milenko-purple);
+        }
+
+        .node-card[data-status="AWAITING HUMAN"]::before {
+            background: var(--wraith-red);
+            box-shadow: var(--neon-glow) var(--wraith-red);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .node-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #444;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .node-id {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .node-role {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            background: #222;
+            border-radius: 20px;
+            border: 1px solid #444;
+        }
+
+        .node-body {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .node-status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: var(--riddle-green);
+            text-transform: uppercase;
+        }
+
+        .global-cli {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 2px solid var(--wraith-red);
+            box-shadow: 0 -5px 15px rgba(255, 0, 0, 0.2);
+            display: flex;
+            gap: 15px;
+        }
+
+        .global-cli input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #555;
+            color: #fff;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .global-cli input:focus {
+            border-bottom-color: var(--wraith-red);
+        }
+
+        .cli-prompt {
+            color: var(--wraith-red);
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Matrix Waterfall Terminal Sidebar */
+        .global-terminal {
+            width: 350px;
+            border-left: 1px solid #333;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .terminal-header {
+            padding: 10px;
+            background: #111;
+            border-bottom: 1px solid #333;
+            font-size: 0.8rem;
+            color: #888;
+            text-align: center;
+        }
+
+        .terminal-feed {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        .log-line {
+            margin-bottom: 5px;
+        }
+
+        .log-time {
+            color: #555;
+            margin-right: 8px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <h1>THE RINGMASTER // GLOBAL SWARM COMMAND</h1>
+        <div style="font-size: 0.85rem; color: #888;">MESH-NET: ACTIVE // NODES: <span id="node-count">0</span></div>
+    </header>
+
+    <div class="main-content">
+        <!-- The Node Grid (CCTV Wall) -->
+        <main class="cctv-wall" id="node-grid">
+            <!-- Nodes injected dynamically -->
+        </main>
+
+        <!-- The Universal Matrix Waterfall Feed -->
+        <aside class="global-terminal">
+            <div class="terminal-header">
+                GLOBAL STDOUT INTERCEPT
+            </div>
+            <div class="terminal-feed" id="log-feed">
+                <!-- Logs injected dynamically -->
+            </div>
+        </aside>
+    </div>
+
+    <!-- The Global Command Interface -->
+    <footer class="global-cli">
+        <div class="cli-prompt">root@ringmaster:~#</div>
+        <input type="text" id="master-input"
+            placeholder="Enter Swarm Directive (e.g., 'Scan target', '/osint Locate open ports')..." autocomplete="off">
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

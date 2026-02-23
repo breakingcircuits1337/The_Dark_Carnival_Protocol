@@ -1,0 +1,1 @@
+[31m[Ollama Error]: Ensure Ollama is running locally. ResponseError: model 'llama3' not found[39m

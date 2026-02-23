@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELF-R // CYBER-CARNIVAL 2027</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Creepster&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="faygo-mist"></div>
+    <div class="grid-overlay"></div>
+
+    <header class="top-bar">
+        <div class="logo">
+            <h1 class="glitch" data-text="SELF_REPLACATER">SELF_REPLACATER</h1>
+            <span class="version">// v2027.ICP</span>
+        </div>
+
+        <div class="hologram-avatar-container">
+            <div class="hologram-avatar">
+                <img src="avatar.png" alt="Cyber Joker">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-ringmaster.png" alt="Cyber Ringmaster">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-wraith.png" alt="Cyber Wraith">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+            <div class="hologram-avatar">
+                <img src="avatar-milenko.png" alt="Cyber Milenko">
+                <div class="scanline"></div>
+                <div class="glitch-overlay"></div>
+            </div>
+        </div>
+
+        <div class="status-meter">
+            <span class="label">FAYGO LEVELS</span>
+            <div class="battery">
+                <div class="fill green"></div>
+            </div>
+            <canvas id="equalizer" width="200" height="30"></canvas>
+        </div>
+    </header>
+
+    <main class="dashboard">
+
+        <!-- Human Review Modal (Hidden by default) -->
+        <div id="review-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content module console-terminal"
+                style="max-height: 80vh; overflow-y: auto; max-width: 800px; width: 90%; margin: 5vh auto; border: 2px solid var(--riddle-green);">
+                <div class="module-header">
+                    <h2>HUMAN COMMANDER VERIFICATION REQUIRED</h2>
+                    <div class="neon-line red"></div>
+                </div>
+                <div class="log-line">> Swarm Plan generated. Awaiting oversight. Modify if needed, or provide feedback
+                    for a secondary iteration.</div>
+
+                <div id="plan-suggestions-container"
+                    style="margin-top: 1rem; padding: 10px; border: 1px solid var(--milenko-purple); border-radius: 4px; display: none;">
+                    <h3 style="color: var(--milenko-purple); margin: 0 0 10px 0; font-size: 0.9rem;">VISIONARY
+                        ARCHITECTURAL SUGGESTIONS:</h3>
+                    <ul id="plan-suggestions-list"
+                        style="margin: 0; padding-left: 20px; font-size: 0.85rem; color: #ddd;"></ul>
+                </div>
+
+                <div id="plan-ui-editor"
+                    style="display: flex; flex-direction: column; gap: 15px; max-height: 40vh; overflow-y: auto; margin-top: 1rem; padding-right: 10px;">
+                </div>
+
+                <input type="text" id="feedback-input" class="cyber-input"
+                    placeholder="Feedback for secondary debate (optional)..." style="width: 100%; margin-top: 1rem;">
+
+                <div style="display: flex; gap: 10px; margin-top: 1rem; justify-content: space-between;">
+                    <button class="hatchet-btn" id="reject-plan-btn"
+                        style="border-color: red; color: red;">ABORT</button>
+                    <button class="hatchet-btn" id="feedback-plan-btn"
+                        style="border-color: var(--milenko-purple); color: var(--milenko-purple);">SUGGEST &
+                        RE-DEBATE</button>
+                    <button class="hatchet-btn" id="approve-plan-btn"
+                        style="border-color: var(--riddle-green); color: var(--riddle-green);">APPROVE & DEPLOY <span
+                            class="shard"></span></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- The Orchestrator Round Table -->
+        <section class="module the-table">
+            <div class="module-header">
+                <h2>THE NEURAL CARNIVAL</h2>
+                <div class="neon-line"></div>
+            </div>
+            <div class="participants">
+                <div class="card visionary">
+                    <div class="hologram-border"></div>
+                    <div class="card-inner">
+                        <h3>VISIONARY</h3>
+                        <select class="model-select" id="visionary-select">
+                            <option value="Kimi" selected>KIMI</option>
+                            <option value="GPT">GPT-4O</option>
+                            <option value="Claudeson">CLAUDESON</option>
+                            <option value="Claude">CLAUDE</option>
+                            <option value="Gemini">GEMINI</option>
+                            <option value="Mistral">MISTRAL</option>
+                            <option value="Groq">GROQ</option>
+                        </select>
+                        <div class="paint-icon eye"></div>
+                        <div class="state idle">STANDBY</div>
+                    </div>
+                </div>
+                <div class="card critic">
+                    <div class="hologram-border"></div>
+                    <div class="card-inner">
+                        <h3>CRITIC</h3>
+                        <select class="model-select" id="critic-select">
+                            <option value="Mistral" selected>MISTRAL</option>
+                            <option value="Kimi">KIMI</option>
+                            <option value="GPT">GPT-4O</option>
+                            <option value="Claudeson">CLAUDESON</option>
+                            <option value="Claude">CLAUDE</option>
+                            <option value="Gemini">GEMINI</option>
+                            <option value="Groq">GROQ</option>
+                        </select>
+                        <div class="paint-icon mouth"></div>
+                        <div class="state idle">STANDBY</div>
+                    </div>
+                </div>
+                <div class="card tactician">
+                    <div class="hologram-border"></div>
+                    <div class="card-inner">
+                        <h3>TACTICIAN</h3>
+                        <select class="model-select" id="tactician-select">
+                            <option value="DeepSeek" selected>DEEPSEEK</option>
+                            <option value="Mistral">MISTRAL</option>
+                            <option value="GPT">GPT-4O</option>
+                            <option value="Claudeson">CLAUDESON</option>
+                            <option value="Claude">CLAUDE</option>
+                            <option value="Gemini">GEMINI</option>
+                            <option value="Groq">GROQ</option>
+                            <option value="Kimi">KIMI</option>
+                        </select>
+                        <div class="paint-icon hatchet"></div>
+                        <div class="state idle">STANDBY</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="middle-row">
+            <section class="module swarm-builder">
+                <div class="module-header">
+                    <h2>SWARM COMMERCE</h2>
+                    <div class="neon-line purple"></div>
+                </div>
+                <div class="task-list" id="dynamic-task-list">
+                    <!-- Populated live from swarm-log socket events -->
+                    <div class="task-row" style="opacity:0.4;font-size:0.8rem;border-left:none;">
+                        <span>> Tasks appear here when debate begins...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Input & Console -->
+            <section class="module console-terminal" style="display: flex; flex-direction: column;">
+                <div class="module-header">
+                    <h2>DARK CARNIVAL COMM-LINK</h2>
+                    <div class="neon-line red"></div>
+                </div>
+
+                <div class="objective-input-container">
+                    <span class="prompt-symbol">>_ OBJT:</span>
+                    <input type="text" id="objective-input" class="cyber-input"
+                        placeholder="DEFINE THE SWARM TARGET EXECUTABLE..." autocomplete="off">
+                </div>
+                <button class="hatchet-btn" id="init-btn">INITIATE DEBATE <span class="shard"></span></button>
+
+                <div id="terminals-grid" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem;">
+                    <!-- Agent Specific Terminals go here dynamically -->
+                    <div class="terminal-window" id="terminal-main"
+                        style="flex: 1 1 100%; min-width: 300px; height: 350px; overflow-y: auto; position: relative; padding-top: 2rem;">
+                        <div
+                            style="position: absolute; top:0; left:0; right:0; background: var(--riddle-green); color: black; font-weight: bold; padding: 2px 10px; font-size: 0.8rem; display: flex; justify-content: space-between;">
+                            <span>tmux: [orchestrator_0]</span>
+                            <span>bash</span>
+                        </div>
+                        <div class="log-line">> Self_R system initialized via WebSocket.</div>
+                        <div class="log-line">> Awaiting swarm payload...</div>
+                        <div class="cursor">_</div>
+                    </div>
+                </div>
+
+                <!-- Completions File Explorer and Learning AI -->
+                <div class="module-header" style="margin-top: 2rem;">
+                    <h2>COMPLETIONS &amp; COGNITION</h2>
+                    <div class="neon-line green"></div>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <div class="files-panel"
+                        style="flex: 1; background: rgba(0,0,0,0.8); border: 1px solid var(--riddle-green); padding: 1rem; color: #fff;">
+                        <h4 style="color: var(--riddle-green);">_ VAULT: /completions/</h4>
+                        <button onclick="fetchFiles()" class="hatchet-btn"
+                            style="padding: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem;">REFRESH VAULT</button>
+                        <button id="self-rewrite-btn" class="hatchet-btn"
+                            style="padding: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; border-color: var(--milenko-purple); color: var(--milenko-purple);">⟳
+                            SELF-REWRITE</button>
+                        <ul id="file-list"
+                            style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+                        </ul>
+                    </div>
+
+                    <div class="learning-panel"
+                        style="flex: 2; background: rgba(0,0,0,0.8); border: 1px solid var(--milenko-purple); padding: 1rem; color: #fff; overflow-y: auto; max-height: 400px;"
+                        id="learning-output">
+                        <h4 style="color: var(--milenko-purple);">_ META-COGNITION LOG</h4>
+                        <div class="log-line">> Ready to ingest and analyze completed payload...</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

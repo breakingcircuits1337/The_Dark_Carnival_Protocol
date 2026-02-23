@@ -1,4 +1,4 @@
-const ws = new WebSocket(`ws://${window.location.host}/ws`);
+let ws;
 const nodeGrid = document.getElementById('node-grid');
 const logFeed = document.getElementById('log-feed');
 const input = document.getElementById('master-input');
@@ -42,25 +42,38 @@ function updateNodes(nodes) {
         `;
 
         if (n.status === 'AWAITING HUMAN') {
-            card.innerHTML += `<button style="margin-top:10px; width:100%; padding:8px; background:transparent; border:1px solid var(--wraith-red); color:var(--wraith-red); cursor:pointer;">[ 👁 INTERVENE ]</button>`;
-
-            // Allow clicking the intervene button to switch to that node's UI
-            card.querySelector('button').addEventListener('click', () => {
-                window.open(`${n.url}`, '_blank');
-            });
+            const btn = document.createElement('button');
+            btn.className = 'intervene-btn';
+            btn.innerText = '[ 👁 INTERVENE ]';
+            btn.addEventListener('click', () => { window.open(`${n.url}`, '_blank'); });
+            card.appendChild(btn);
         }
 
         nodeGrid.appendChild(card);
     });
 }
 
-ws.onopen = () => { appendLog('SYSTEM', 'Connected to the CARNIVAL GROUNDS.', '#0f0'); };
+function connect() {
+    ws = new WebSocket(`ws://${window.location.host}/ws`);
+    ws.onopen = () => { appendLog('SYSTEM', 'Connected to the CARNIVAL GROUNDS.', '#0f0'); };
 
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'node_update') { updateNodes(data.nodes); }
-    if (data.type === 'terminal_log') { appendLog(data.node_id, data.log); }
-};
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'node_update') { updateNodes(data.nodes); }
+        if (data.type === 'terminal_log') { appendLog(data.node_id, data.log); }
+    };
+
+    ws.onclose = (e) => {
+        appendLog('SYSTEM', 'Connection lost! Reconnecting to the Ringmaster...', '#f00');
+        setTimeout(connect, 3000);
+    };
+
+    ws.onerror = (err) => {
+        console.error('WebSocket Error:', err);
+    };
+}
+
+connect();
 
 input.addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {

@@ -54,7 +54,7 @@ function updateNodes(nodes) {
     });
 }
 
-ws.onopen = () => { appendLog('SYSTEM', 'Connected to the MESH-NET.', '#0f0'); };
+ws.onopen = () => { appendLog('SYSTEM', 'Connected to the CARNIVAL GROUNDS.', '#0f0'); };
 
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);

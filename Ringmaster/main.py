@@ -1,9 +1,12 @@
 import asyncio
 import json
 import httpx
+import os
+import sys
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 
@@ -22,6 +25,27 @@ active_nodes: Dict[str, Dict[str, Any]] = {}
 
 # Active UI WebSocket connections (The Hub)
 ui_connections: List[WebSocket] = []
+
+def redraw_cli():
+    os.system('cls' if os.name == 'nt' else 'clear')
+    wagons = len(active_nodes)
+    agents = wagons * 3
+    banner = f"""
+      _           _      ____                 _             _ 
+     | |         | |    / ___|               (_)           | |
+   __| | __ _ _ _| | __| |     __ _ _ __ _ __  ___   ____ _| |
+  / _` |/ _` | '__| |/ / |    / _` | '__| '_ \| \ \ / / _` | |
+ | (_| | (_| | |  |   <| |___| (_| | |  | | | | |\ V / (_| | |
+  \__,_|\__,_|_|  |_|\_\\____|\__,_|_|  |_| |_|_| \_/ \__,_|_|
+             T H E   P R O T O C O L   V 1 . 0
+--------------------------------------------------------------
+[+] The Ringmaster: ONLINE
+[+] Swarm Status: {wagons} Wagons Connected ({agents} Agents Active)
+[+] Current Mode: ADVERSARIAL DEBATE (JECKEL & HYDE)
+--------------------------------------------------------------
+"""
+    sys.stdout.write(banner)
+    sys.stdout.flush()
 
 class NodeRegistration(BaseModel):
     id: str
@@ -51,6 +75,7 @@ async def register_node(node: NodeRegistration):
         active_nodes[node_id]["role"] = node.role
         active_nodes[node_id]["last_ping"] = 123456789
     await broadcast_to_ui({"type": "node_update", "nodes": list(active_nodes.values())})
+    redraw_cli()
     return {"status": "registered", "node_id": node_id}
 
 @app.post("/api/swarm/dispatch")
@@ -140,6 +165,15 @@ async def broadcast_to_ui(message: dict):
 
 app.mount("/", StaticFiles(directory="public", html=True), name="public")
 
+@app.on_event("startup")
+async def startup_event():
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    # A short delay to let uvicorn print its startup lines before we clear the screen
+    async def initial_draw():
+        await asyncio.sleep(1)
+        redraw_cli()
+    asyncio.create_task(initial_draw())
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="warning")

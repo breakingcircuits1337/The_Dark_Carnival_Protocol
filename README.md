@@ -1,70 +1,104 @@
 # 🎪 The Dark Carnival Protocol
 
-![Ringmaster Command Center](../Gemini_Generated_Image_6m9fhm6m9fhm6m9f.png)
-*(The Hub-and-Spoke Swarm Dashboard routing a live intelligence payload to the Proxmox Grid)*
+> *"Every Clown Has A Purpose. Every Node Has A Role."*
 
-**The Dark Carnival Protocol** is a highly scalable, Hub-and-Spoke autonomous agent architecture designed for bare-metal and containerized environments (like Proxmox). 
+**The Dark Carnival Protocol** is a highly scalable, Hub-and-Spoke autonomous AI agent swarm designed for bare-metal and containerized environments (Proxmox). It replaces a single monolithic AI agent with a decentralized, adversarial debate swarm — routing objectives to specialized edge nodes across your entire infrastructure grid.
 
-It separates the concept of a single large "Omni-Agent" into a decentralized Swarm. 
+---
+
+## 🃏 V1 Showcase — The Ringmaster Hub
+
+![Ringmaster Hub V1](docs/ringmaster_hub_v1.png)
+*The live command center: 3 Wagons online, Neural Carnival debate agents loaded, and the Faygo Shower global log running in real-time.*
+
+### ✨ Hub Features
+- **Holographic Joker's Cards** — 4 animated 3D avatar holograms (Cyber Joker, Ringmaster, Wraith, Milenko)
+- **CCTV Wagon Wall** — Live grid of all registered Swarm nodes with real-time status
+- **The Neural Carnival** — Select LLM models per debate role (Visionary, Critic, Tactician) and launch coordinated swarm attacks
+- **Swarm Commerce** — Live task list of global swarm execution progress
+- **Dark Carnival Comm-Link** — Central command terminal with `INITIATE GLOBAL EVENT` button
+- **Completions & Cognition Vault** — Browse, analyze, and manage completed swarm payloads
+- **The Faygo Shower** — Real-time global log feed from all connected Wagons
+- **Ambient Static Audio** — Web Audio API powered dark carnival atmosphere (click to activate)
+- **`[ 👁 INTERVENE ]`** — Human-in-the-loop override when a Wagon hits `AWAITING HUMAN`
+
+---
 
 ## 🧠 How The Swarm Thinks
-Unlike a traditional GPT wrapper that spits out a single zero-shot response, every `Objective` dispatched through this protocol triggers a **Multi-Agent Debate**.
 
-On the Edge Nodes (the Spokes), Three LLM Personas sequentially synthesize the action plan:
-1. **The Visionary (`Kimi`/`Azure GPT-4o`)**: Drafts the massive, unconstrained architectural approach to the objective.
-2. **The Critic (`Mistral`)**: Rips the Visionary's draft apart, explicitly searching for security flaws, scalability bottlenecks, and architectural risks.
-3. **The Tactician (`DeepSeek`)**: Reads the Critic's destruction, synthesizes the survivors, and breaks the final verified plan into heavily-scoped Sub-Tasks.
+Unlike a standard GPT wrapper, every `Objective` dispatched through this protocol triggers a **Multi-Agent Adversarial Debate**.
 
-Once the debate is complete, the Edge Node flashes `AWAITING HUMAN` to the Ringmaster Hub, rendering an `[ 👁 INTERVENE ]` button for the human overlord to Inject, Approve, or Abort.
+On the Edge Nodes, three LLM personas battle it out:
+1. **The Visionary** — Drafts the massive, unconstrained approach. Default: `Kimi`
+2. **The Critic** — Rips the plan apart: security flaws, bottlenecks, and risks. Default: `Mistral`
+3. **The Tactician** — Synthesizes the wreckage into a concrete, scoped execution plan. Default: `DeepSeek`
+
+When the debate concludes, the Edge Node flashes `AWAITING HUMAN` back to the Hub, where the **`[ 👁 INTERVENE ]`** button appears for the human overlord to Approve, Inject, or Abort.
+
+---
 
 ## 🏗️ Architecture
 
-The Protocol is split into two halves:
+```
+[ Ringmaster Hub :8000 ]
+         |
+    ┌────┴────┐
+    │  FastAPI │  ← WebSocket broadcast to all UI clients
+    │ + WS     │  ← Receives Node heartbeats & dispatches Objectives
+    └────┬─────┘
+         │  HTTP /api/swarm/dispatch
+    ┌────┴────────────────────────┐
+    │  Edge Nodes (Spokes)        │
+    │  LXC-CORE   :8080           │
+    │  LXC-OSINT  :8081           │
+    │  LXC-MEDIA  :8082           │
+    └─────────────────────────────┘
+```
 
-### 1. The Ringmaster (The Hub)
-A lightweight FastAPI/Python websocket server. It acts as the immutable Source of Truth. It holds zero AI logic. Its only job is to track thousands of nodes, accept user input via the command bar, and accurately Round-Robin route the `Objective` payload to an `IDLE` container.
+### The Ringmaster (Hub)
+Lightweight FastAPI + WebSocket server. Zero AI logic. Tracks nodes, routes directives, and broadcasts real-time state to the GUI.
 
-### 2. Replacater Edge Nodes (The Spokes)
-A heavy Node.js/TypeScript runtime. These nodes boot up dynamically across your Proxmox containers. As soon as they boot, they silently execute an IPv4 internal daemon that pings the Ringmaster every 10 seconds: `"Hello, I am node OSINT-8081 at 192.168.1.124"`. 
-They house the LLM API Keys, the Tool Execution framework, and the `RoundTable` debate orchestrator.
+### Edge Nodes (Wagons / Spokes)
+Node.js/TypeScript runtime deployed in Proxmox LXC containers. Auto-register to the Ringmaster on boot. Run the full Visionary → Critic → Tactician debate loop.
 
-## 🚀 Quick Start Guide
+---
 
-### Step 1: Boot The Hub
-Inside the root directory, simply run the launch script to build the Python Virtual Environment and start the server exactly on port `8000`.
+## 🚀 Quick Start
+
+### Boot The Hub
 ```bash
 ./launch_ringmaster.sh
 ```
-*Visit `http://localhost:8000` to view the (empty) Matrix Grid.*
+*Visit `http://localhost:8000` to access the Ringmaster Command Center.*
 
-### Step 2: Boot The Edge Nodes
-On another machine, or inside a Proxmox LXC Container, fire up an Edge node and assign it a specific role (e.g., `CORE`, `MEDIA`, `OSINT`, `DEV`).
-
+### Boot An Edge Node
 ```bash
-# General Usage
-./launch_node.sh <PORT> <ROLE>
-
-# Example: Spawning an Open-Source Intelligence Node
+# ./launch_node.sh <PORT> <ROLE>
 ./launch_node.sh 8081 OSINT
 ```
 
 ### Proxmox Automation
-If you are deploying this instantly across an army of Proxmox LXC containers, drop the provided helper script into your `/root` directory inside your Golden Image Template.
 ```bash
 ./proxmox_swarm_boot.sh
 ```
+*(Deploy this into your Proxmox Golden Image Template container to auto-register all clones on boot.)*
 
-## 🔒 Environment Requirements
-The Edge Nodes require standard API keys to function. Place an `.env` file inside the `Self-R` directory.
-A template is provided at `Self-R/.env.example`.
+---
+
+## 🔒 Environment Variables
+
+Place a `.env` file in the `Self-R/` directory. A template is provided at `Self-R/.env.example`.
 
 ```env
-# Required for the Hub Connection
-NODE_ID="LXC-DarkCarnival"
+NODE_ID="LXC-DarkCarnival"  # Unique ID for this Wagon
 
-# The LLM Configs for the Three Personas
 AZURE_API_KEY="..."
 KIMI_ENDPOINT="..."
 MISTRAL_ENDPOINT="..."
-# ... (See .env.example for full list)
+DEEPSEEK_API_KEY="..."
+# See .env.example for the full list
 ```
+
+---
+
+*Built with FastAPI · Node.js · WebSockets · Web Audio API · Proxmox LXC*

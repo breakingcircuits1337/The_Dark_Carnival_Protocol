@@ -26,6 +26,8 @@ function updateNodes(nodes) {
         const card = document.createElement('div');
         card.className = 'node-card';
         card.setAttribute('data-status', n.status);
+        card.style.cursor = 'pointer';
+        card.title = `Click to open ${n.id} UI`;
 
         card.innerHTML = `
             <div class="node-header">
@@ -34,24 +36,48 @@ function updateNodes(nodes) {
             </div>
             <div class="node-body">
                 <div>URL: ${n.url}</div>
-                <div>LOBE ACTIVE</div>
+                <div style="color: var(${color}); font-size: 0.8rem; margin-top: 6px; opacity: 0.7;">
+                    ↗ CLICK TO OPEN WAGON UI
+                </div>
             </div>
             <div class="node-status" style="${n.status === 'ERROR' ? 'color: red;' : ''}">
                 > ${n.status}
             </div>
         `;
 
+        // Clicking the card opens the Self-R UI for this node
+        card.addEventListener('click', (e) => {
+            // Don't intercept clicks on the INTERVENE button
+            if (e.target.classList.contains('intervene-btn')) return;
+            if (typeof playSFX === 'function') playSFX('click');
+            window.open(n.url, '_blank');
+        });
+
+        // Hover glow to match the role color
+        card.addEventListener('mouseenter', () => {
+            card.style.boxShadow = `0 0 20px var(${color}), 0 10px 20px rgba(0,0,0,0.8)`;
+            card.style.borderColor = `var(${color})`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.style.boxShadow = '';
+            card.style.borderColor = '';
+        });
+
         if (n.status === 'AWAITING HUMAN') {
             const btn = document.createElement('button');
             btn.className = 'intervene-btn';
             btn.innerText = '[ 👁 INTERVENE ]';
-            btn.addEventListener('click', () => { window.open(`${n.url}`, '_blank'); });
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Don't trigger card open
+                window.open(`${n.url}`, '_blank');
+            });
             card.appendChild(btn);
         }
 
         nodeGrid.appendChild(card);
     });
 }
+
 
 function connect() {
     ws = new WebSocket(`ws://${window.location.host}/ws`);

@@ -6,68 +6,104 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>THE RINGMASTER // SWARM COMMAND</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Share+Tech+Mono&display=swap');
+
         :root {
-            --riddle-green: #00ff00;
-            --milenko-purple: #8b00ff;
-            --wraith-red: #ff0000;
-            --bg-color: #050505;
-            --panel-bg: rgba(10, 10, 10, 0.85);
-            --neon-glow: 0 0 10px;
+            --riddle-green: #39ff14;
+            --milenko-purple: #9d00ff;
+            --wraith-red: #ff003c;
+            --bg-color: #050205;
+            --panel-bg: rgba(15, 5, 20, 0.85);
+            --neon-glow: 0 0 15px;
+            --faygo-orange: #ff6600;
         }
 
         body {
             margin: 0;
             padding: 0;
             background-color: var(--bg-color);
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
+            color: #e0e0e0;
+            font-family: 'Share Tech Mono', monospace;
             background-image:
-                linear-gradient(rgba(0, 255, 0, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 0, 0.03) 1px, transparent 1px);
-            background-size: 20px 20px;
+                radial-gradient(circle at 50% 50%, rgba(157, 0, 255, 0.05) 0%, transparent 60%),
+                linear-gradient(rgba(57, 255, 20, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(57, 255, 20, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
             display: flex;
             flex-direction: column;
             height: 100vh;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* Scanline Overlay */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 999;
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
         }
 
         .header {
-            padding: 15px 20px;
-            border-bottom: 2px solid var(--milenko-purple);
-            box-shadow: var(--neon-glow) var(--milenko-purple);
+            padding: 15px 30px;
+            border-bottom: 3px solid var(--milenko-purple);
+            box-shadow: 0 5px 20px rgba(157, 0, 255, 0.4);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: linear-gradient(180deg, rgba(139, 0, 255, 0.2) 0%, rgba(0, 0, 0, 0) 100%);
+            background: linear-gradient(180deg, rgba(70, 0, 120, 0.4) 0%, rgba(0, 0, 0, 0.9) 100%);
+            position: relative;
+            z-index: 10;
         }
 
         .header h1 {
             margin: 0;
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #fff;
-            text-shadow: 2px 2px 0 var(--milenko-purple);
+            font-family: 'Creepster', cursive;
+            font-size: 2.5rem;
+            letter-spacing: 4px;
+            color: var(--milenko-purple);
+            text-shadow: 0 0 10px var(--milenko-purple), 0 0 20px var(--milenko-purple), 2px 2px 0px #000;
+        }
+
+        .carnival-stats {
+            font-size: 1.1rem;
+            color: var(--riddle-green);
+            text-shadow: 0 0 5px var(--riddle-green);
+            border: 1px solid var(--riddle-green);
+            padding: 5px 15px;
+            border-radius: 4px;
+            background: rgba(0, 255, 0, 0.05);
+            box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.2);
         }
 
         .cctv-wall {
             flex: 1;
-            padding: 20px;
+            padding: 30px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
             overflow-y: auto;
             align-content: start;
+            position: relative;
+            z-index: 5;
         }
 
         .node-card {
             background: var(--panel-bg);
-            border: 1px solid #333;
-            border-radius: 4px;
-            padding: 15px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
             position: relative;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.9);
+            overflow: hidden;
         }
 
         .node-card::before {
@@ -76,36 +112,57 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: var(--riddle-green);
+            box-shadow: 0 0 10px var(--riddle-green);
         }
 
         .node-card[data-status="IDLE"]::before {
             background: #555;
+            box-shadow: none;
         }
 
         .node-card[data-status="DRAFTING"]::before {
             background: var(--milenko-purple);
             box-shadow: var(--neon-glow) var(--milenko-purple);
+            animation: pulse-draft 1.5s infinite;
         }
 
         .node-card[data-status="AWAITING HUMAN"]::before {
-            background: var(--wraith-red);
-            box-shadow: var(--neon-glow) var(--wraith-red);
-            animation: pulse 1s infinite;
+            background: var(--faygo-orange);
+            box-shadow: 0 0 20px var(--faygo-orange);
+            animation: siren 1s infinite;
         }
 
-        @keyframes pulse {
+        @keyframes siren {
             0% {
                 opacity: 1;
+                filter: hue-rotate(0deg);
             }
 
             50% {
-                opacity: 0.5;
+                opacity: 0.8;
+                filter: hue-rotate(15deg) brightness(1.5);
             }
 
             100% {
                 opacity: 1;
+                filter: hue-rotate(0deg);
+            }
+        }
+
+        @keyframes pulse-draft {
+            0% {
+                opacity: 0.6;
+            }
+
+            50% {
+                opacity: 1;
+                box-shadow: 0 0 20px var(--milenko-purple);
+            }
+
+            100% {
+                opacity: 0.6;
             }
         }
 
@@ -113,102 +170,163 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px dashed #444;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 12px;
+            margin-bottom: 15px;
         }
 
         .node-id {
             font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 1.4rem;
+            text-shadow: 0 0 5px currentColor;
         }
 
         .node-role {
-            font-size: 0.75rem;
-            padding: 3px 8px;
-            background: #222;
-            border-radius: 20px;
-            border: 1px solid #444;
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            background: #000;
+            border-radius: 4px;
+            border: 1px solid var(--riddle-green);
+            color: var(--riddle-green);
+            box-shadow: 0 0 5px var(--riddle-green);
+            letter-spacing: 1px;
         }
 
         .node-body {
-            font-size: 0.85rem;
-            color: #aaa;
+            font-size: 0.95rem;
+            color: #bbb;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #444;
         }
 
         .node-status {
             margin-top: 15px;
             font-weight: bold;
+            font-size: 1.1rem;
             color: var(--riddle-green);
             text-transform: uppercase;
+            text-shadow: 0 0 5px var(--riddle-green);
+        }
+
+        .intervene-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 102, 0, 0.1);
+            border: 2px solid var(--faygo-orange);
+            color: var(--faygo-orange);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            text-shadow: 0 0 5px var(--faygo-orange);
+            box-shadow: 0 0 10px rgba(255, 102, 0, 0.3);
+            transition: all 0.2s;
+        }
+
+        .intervene-btn:hover {
+            background: var(--faygo-orange);
+            color: #000;
+            box-shadow: 0 0 20px var(--faygo-orange);
         }
 
         .global-cli {
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            border-top: 2px solid var(--wraith-red);
-            box-shadow: 0 -5px 15px rgba(255, 0, 0, 0.2);
+            padding: 25px 30px;
+            background: #000;
+            border-top: 3px solid var(--wraith-red);
+            box-shadow: 0 -10px 30px rgba(255, 0, 60, 0.3);
             display: flex;
-            gap: 15px;
+            gap: 20px;
+            position: relative;
+            z-index: 10;
         }
 
         .global-cli input {
             flex: 1;
-            background: transparent;
-            border: none;
-            border-bottom: 1px solid #555;
+            background: rgba(255, 0, 60, 0.05);
+            border: 1px solid #444;
+            border-left: 4px solid var(--wraith-red);
             color: #fff;
-            padding: 10px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
+            padding: 15px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2rem;
             outline: none;
+            border-radius: 0 4px 4px 0;
+            transition: all 0.3s;
         }
 
         .global-cli input:focus {
-            border-bottom-color: var(--wraith-red);
+            background: rgba(255, 0, 60, 0.1);
+            border-color: var(--wraith-red);
+            box-shadow: 0 0 15px rgba(255, 0, 60, 0.4);
         }
 
         .cli-prompt {
             color: var(--wraith-red);
             font-weight: bold;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             display: flex;
             align-items: center;
+            text-shadow: 0 0 8px var(--wraith-red);
         }
 
         /* Matrix Waterfall Terminal Sidebar */
         .global-terminal {
-            width: 350px;
-            border-left: 1px solid #333;
-            background: rgba(0, 0, 0, 0.95);
+            width: 400px;
+            border-left: 2px solid var(--milenko-purple);
+            background: rgba(5, 0, 10, 0.95);
             display: flex;
             flex-direction: column;
+            box-shadow: -5px 0 20px rgba(157, 0, 255, 0.2);
+            position: relative;
+            z-index: 8;
         }
 
         .terminal-header {
-            padding: 10px;
-            background: #111;
-            border-bottom: 1px solid #333;
-            font-size: 0.8rem;
-            color: #888;
+            padding: 15px;
+            background: linear-gradient(90deg, #111, rgba(157, 0, 255, 0.2));
+            border-bottom: 2px solid var(--milenko-purple);
+            font-size: 1.2rem;
+            color: var(--milenko-purple);
+            text-shadow: 0 0 5px var(--milenko-purple);
+            font-weight: bold;
             text-align: center;
+            letter-spacing: 2px;
         }
 
         .terminal-feed {
             flex: 1;
-            padding: 15px;
+            padding: 20px;
             overflow-y: auto;
-            font-size: 0.8rem;
-            line-height: 1.4;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .terminal-feed::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-feed::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        .terminal-feed::-webkit-scrollbar-thumb {
+            background: var(--milenko-purple);
+            border-radius: 4px;
         }
 
         .log-line {
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 4px;
         }
 
         .log-time {
-            color: #555;
-            margin-right: 8px;
+            color: #666;
+            margin-right: 12px;
         }
 
         .main-content {
@@ -223,7 +341,7 @@
 
     <header class="header">
         <h1>THE DARK CARNIVAL // THE RINGMASTER</h1>
-        <div style="font-size: 0.85rem; color: #888;">CARNIVAL GROUNDS: ACTIVE // WAGONS: <span id="node-count">0</span>
+        <div class="carnival-stats">CARNIVAL GROUNDS: ACTIVE // WAGONS: <span id="node-count">0</span>
         </div>
     </header>
 

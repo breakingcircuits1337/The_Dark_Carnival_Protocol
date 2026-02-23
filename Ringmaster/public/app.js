@@ -60,7 +60,10 @@ function connect() {
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'node_update') { updateNodes(data.nodes); }
-        if (data.type === 'terminal_log') { appendLog(data.node_id, data.log); }
+        if (data.type === 'terminal_log') {
+            appendLog(data.node_id, data.log);
+            if (typeof playSFX === 'function') playSFX('beep');
+        }
     };
 
     ws.onclose = (e) => {
@@ -87,6 +90,7 @@ input.addEventListener('keydown', async (e) => {
 const initBtn = document.getElementById('init-btn');
 if (initBtn) {
     initBtn.addEventListener('click', () => {
+        if (typeof playSFX === 'function') playSFX('click');
         const val = input.value.trim();
         if (!val) {
             input.focus();
@@ -160,7 +164,10 @@ function setCardState(role, text, stateClass) {
     if (!el) return;
     const saved = localStorage.getItem(id);
     if (saved) el.value = saved;
-    el.addEventListener('change', () => { localStorage.setItem(id, el.value); });
+    el.addEventListener('change', () => {
+        localStorage.setItem(id, el.value);
+        if (typeof playSFX === 'function') playSFX('beep');
+    });
 });
 
 // ─── 3D Card Tilt ─────────────────────────────────────────────────────────────
@@ -175,3 +182,91 @@ document.querySelectorAll('.card').forEach(card => {
         card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
     });
 });
+
+// ─── Web Audio SFX & Ambient Static ──────────────────────────────────────────
+let audioCtx;
+let ambientGain;
+let sfxGain;
+
+function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // SFX Gain Node
+    sfxGain = audioCtx.createGain();
+    sfxGain.connect(audioCtx.destination);
+    sfxGain.gain.value = 0.15;
+
+    // Ambient Static Noise Generator
+    const bufferSize = audioCtx.sampleRate * 2; // 2 seconds of noise
+    const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        output[i] = Math.random() * 2 - 1; // Pure White Noise
+    }
+
+    const whiteNoise = audioCtx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+    whiteNoise.loop = true;
+
+    // Deep LPF to make the static rumble in the background like dark machinery
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 400; // Deep rumble
+
+    // LFO to make the static pulse/breathe
+    const lfo = audioCtx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.5; // Slow pulse
+
+    const lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 200; // Sweep frequency by 200Hz
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(filter.frequency);
+    lfo.start();
+
+    ambientGain = audioCtx.createGain();
+    ambientGain.gain.value = 0.08; // Volume of the background static
+
+    whiteNoise.connect(filter);
+    filter.connect(ambientGain);
+    ambientGain.connect(audioCtx.destination);
+
+    whiteNoise.start();
+}
+
+// Browsers require a gesture to start audio
+document.addEventListener('click', initAudio, { once: true });
+document.addEventListener('keydown', initAudio, { once: true });
+
+function playSFX(type) {
+    if (!audioCtx || audioCtx.state === 'suspended') return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(sfxGain);
+    const now = audioCtx.currentTime;
+
+    if (type === 'click') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'beep') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+        osc.start(now); osc.stop(now + 0.1);
+    } else if (type === 'success') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, now);
+        osc.frequency.setValueAtTime(600, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+        osc.start(now); osc.stop(now + 0.3);
+    }
+}

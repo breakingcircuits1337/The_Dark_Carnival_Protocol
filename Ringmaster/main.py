@@ -3,6 +3,7 @@ import json
 import httpx
 import os
 import sys
+import time
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,18 +74,19 @@ class SwarmTaskPayload(BaseModel):
 async def register_node(node: NodeRegistration):
     """Sub-nodes call this on boot to announce themselves to the Ringmaster."""
     node_id = node.id
+    now = time.time()
     if node_id not in active_nodes:
         active_nodes[node_id] = {
             "id": node.id,
             "url": f"http://{node.ip}:{node.port}",
             "role": node.role,
             "status": "IDLE",
-            "last_ping": 123456789 # Placeholder for actual time later
+            "last_ping": now
         }
     else:
         active_nodes[node_id]["url"] = f"http://{node.ip}:{node.port}"
         active_nodes[node_id]["role"] = node.role
-        active_nodes[node_id]["last_ping"] = 123456789
+        active_nodes[node_id]["last_ping"] = now
     await broadcast_to_ui({"type": "node_update", "nodes": list(active_nodes.values())})
     redraw_cli()
     return {"status": "registered", "node_id": node_id}
@@ -293,11 +295,32 @@ app.mount("/", StaticFiles(directory="public", html=True), name="public")
 @app.on_event("startup")
 async def startup_event():
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    # A short delay to let uvicorn print its startup lines before we clear the screen
+
     async def initial_draw():
         await asyncio.sleep(1)
         redraw_cli()
     asyncio.create_task(initial_draw())
+
+    async def prune_stale_nodes():
+        """Remove nodes that haven't heartbeated in 35 seconds."""
+        STALE_THRESHOLD = 35
+        while True:
+            await asyncio.sleep(15)
+            now = time.time()
+            stale = [nid for nid, n in active_nodes.items()
+                     if now - n.get("last_ping", 0) > STALE_THRESHOLD]
+            for nid in stale:
+                del active_nodes[nid]
+                await broadcast_to_ui({
+                    "type": "terminal_log",
+                    "node_id": "RINGMASTER",
+                    "log": f"> ⚠ Node [{nid}] evicted — heartbeat timeout (>{STALE_THRESHOLD}s)."
+                })
+            if stale:
+                await broadcast_to_ui({"type": "node_update", "nodes": list(active_nodes.values())})
+                redraw_cli()
+
+    asyncio.create_task(prune_stale_nodes())
 
 if __name__ == "__main__":
     import uvicorn

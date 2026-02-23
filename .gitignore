@@ -1,2 +1,8 @@
 venv/
 Ringmaster/venv/
+node_modules/
+Self-R/node_modules/
+Self-R/dist/
+*.bak
+__pycache__/
+*.pyc

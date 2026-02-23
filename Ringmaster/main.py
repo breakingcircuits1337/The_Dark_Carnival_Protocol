@@ -65,6 +65,9 @@ class SwarmTaskPayload(BaseModel):
     objective: str
     target_node_id: Optional[str] = None # Optional: direct to specific node
     role_target: Optional[str] = None    # Optional: direct to any node with this role
+    visionary: str = "Kimi"
+    critic: str = "Mistral"
+    tactician: str = "DeepSeek"
 
 @app.post("/api/nodes/register")
 async def register_node(node: NodeRegistration):
@@ -130,9 +133,9 @@ async def dispatch_swarm(payload: SwarmTaskPayload):
                 # Assuming the sub-node's /api/swarm/execute endpoint exists based on earlier implementation
                 req_payload = {
                     "objective": objective,
-                    "visionary": "Kimi",
-                    "critic": "Mistral",
-                    "tactician": "DeepSeek",
+                    "visionary": payload.visionary,
+                    "critic": payload.critic,
+                    "tactician": payload.tactician,
                     "auto_approve": False # Set to false so UI can intercept
                 }
                 res = await client.post(f"{target_url}/api/swarm/execute", json=req_payload)

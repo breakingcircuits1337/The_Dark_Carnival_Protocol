@@ -463,6 +463,297 @@
             display: flex;
             overflow: hidden;
         }
+
+        /* ---------------- PORTED FROM SELF-R ---------------- */
+        .dashboard-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .dashboard-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .dashboard-scroll::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        .dashboard-scroll::-webkit-scrollbar-thumb {
+            background: var(--riddle-green);
+            border-radius: 4px;
+        }
+
+        .module {
+            background: rgba(10, 10, 10, 0.8);
+            padding: 1.5rem;
+            position: relative;
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 2rem;
+        }
+
+        .module::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(transparent, transparent, transparent, var(--milenko-purple), var(--riddle-green));
+            animation: rotate-trace 6s linear infinite;
+            z-index: -2;
+            opacity: 0.5;
+        }
+
+        .module::after {
+            content: '';
+            position: absolute;
+            inset: 1px;
+            background: rgba(10, 10, 10, 0.95);
+            z-index: -1;
+        }
+
+        @keyframes rotate-trace {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .module-header h2 {
+            font-family: 'Creepster', cursive;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .neon-line {
+            height: 2px;
+            background: var(--riddle-green);
+            width: 100px;
+            margin-top: 0.5rem;
+            box-shadow: 0 0 10px var(--riddle-green);
+        }
+
+        .neon-line.purple {
+            background: var(--milenko-purple);
+            box-shadow: 0 0 10px var(--milenko-purple);
+            width: 150px;
+        }
+
+        .neon-line.red {
+            background: var(--wraith-red);
+            box-shadow: 0 0 10px var(--wraith-red);
+            width: 120px;
+        }
+
+        /* Cards Array */
+        .participants {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .card {
+            position: relative;
+            background: #000;
+            padding: 1.5rem;
+            min-height: 200px;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            transition: transform 0.1s ease-out;
+            transform-style: preserve-3d;
+        }
+
+        .card:hover {
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.1);
+        }
+
+        .card-inner {
+            transform: translateZ(30px);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .hologram-border {
+            position: absolute;
+            inset: 0;
+            border: 2px solid;
+            border-image: linear-gradient(45deg, var(--riddle-green), var(--milenko-purple), var(--wraith-red)) 1;
+            opacity: 0.5;
+            animation: holo-cycle 4s linear infinite;
+        }
+
+        @keyframes holo-cycle {
+            0% {
+                filter: hue-rotate(0deg);
+            }
+
+            100% {
+                filter: hue-rotate(360deg);
+            }
+        }
+
+        .card-inner h3 {
+            font-family: 'Creepster', cursive;
+            color: #ffffff;
+            font-size: 1.5rem;
+            margin-top: 0;
+        }
+
+        .model-select {
+            background: rgba(10, 10, 10, 0.9);
+            color: var(--riddle-green);
+            border: 1px solid var(--riddle-green);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.9rem;
+            padding: 0.3rem;
+            margin-bottom: 2rem;
+            outline: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            text-shadow: 0 0 5px var(--riddle-green);
+            box-shadow: 0 0 5px rgba(57, 255, 20, 0.2);
+            width: 80%;
+        }
+
+        .model-select option {
+            background: #000;
+            color: #fff;
+            text-shadow: none;
+        }
+
+        .state {
+            margin-top: auto;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .state.scanning {
+            color: var(--riddle-green);
+            text-shadow: 0 0 8px var(--riddle-green);
+            animation: blink 1s infinite;
+        }
+
+        .state.idle {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .paint-icon {
+            width: 40px;
+            height: 40px;
+            margin: 10px auto;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.7;
+            filter: drop-shadow(0 0 5px currentColor);
+        }
+
+        .paint-icon.eye {
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" fill="%2339FF14" xmlns="http://www.w3.org/2000/svg"><path d="M12 4C7 4 2.73 7.11 1 12c1.73 4.89 6 8 11 8s9.27-3.11 11-8c-1.73-4.89-6-8-11-8zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/><path d="M12 2L10 6L14 6L12 2Z"/></svg>');
+            color: var(--riddle-green);
+        }
+
+        .paint-icon.mouth {
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" fill="%239d00ff" xmlns="http://www.w3.org/2000/svg"><path d="M2 12C2 12 6 18 12 18C18 18 22 12 22 12C22 12 18 14 12 14C6 14 2 12 2 12Z"/><path d="M4 10L6 14L8 10L10 14L12 10L14 14L16 10L18 14L20 10" stroke="%239d00ff" stroke-width="2"/></svg>');
+            color: var(--milenko-purple);
+        }
+
+        .paint-icon.hatchet {
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" fill="%23ff003c" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L8 8H16L12 2Z"/><path d="M11 8V22H13V8H11Z"/><path d="M8 8V12C8 12 10 14 12 14C14 14 16 12 16 12V8H8Z"/></svg>');
+            color: var(--wraith-red);
+        }
+
+        .middle-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .task-list {
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .task-row {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 0.8rem;
+            border-left: 2px solid transparent;
+        }
+
+        .hatchet-btn {
+            background: transparent;
+            border: 2px solid var(--wraith-red);
+            color: #fff;
+            font-family: 'Share Tech Mono', monospace;
+            font-weight: bold;
+            font-size: 1rem;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            text-shadow: 0 0 5px var(--wraith-red);
+            box-shadow: inset 0 0 10px rgba(255, 0, 60, 0.2), 0 0 10px rgba(255, 0, 60, 0.2);
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .hatchet-btn:hover {
+            background: var(--wraith-red);
+            color: #000;
+            box-shadow: 0 0 20px var(--wraith-red);
+        }
+
+        .terminal-window {
+            background: #000;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.85rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            height: 300px;
+            border: 1px solid rgba(157, 0, 255, 0.3);
+            overflow-y: auto;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(157, 0, 255, 0.1);
+            color: #fff;
+        }
+
+        .color-green {
+            color: var(--riddle-green);
+            text-shadow: 0 0 5px var(--riddle-green);
+        }
+
+        .cursor {
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            49% {
+                opacity: 1;
+            }
+
+            50%,
+            100% {
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -504,10 +795,126 @@
     </header>
 
     <div class="main-content">
-        <!-- The Node Grid (CCTV Wall) -->
-        <main class="cctv-wall" id="node-grid">
-            <!-- Nodes injected dynamically -->
-        </main>
+        <div class="dashboard-scroll">
+            <!-- The Node Grid (CCTV Wall) -->
+            <main class="cctv-wall" id="node-grid">
+                <!-- Nodes injected dynamically -->
+            </main>
+
+            <!-- The Orchestrator Round Table -->
+            <section class="module the-table">
+                <div class="module-header">
+                    <h2>THE NEURAL CARNIVAL</h2>
+                    <div class="neon-line"></div>
+                </div>
+                <div class="participants">
+                    <div class="card visionary">
+                        <div class="hologram-border"></div>
+                        <div class="card-inner">
+                            <h3>VISIONARY</h3>
+                            <select class="model-select" id="visionary-select">
+                                <option value="Kimi" selected>KIMI</option>
+                                <option value="GPT">GPT-4O</option>
+                                <option value="Claude">CLAUDE</option>
+                                <option value="DeepSeek">DEEPSEEK</option>
+                            </select>
+                            <div class="paint-icon eye"></div>
+                            <div class="state idle">STANDBY</div>
+                        </div>
+                    </div>
+                    <div class="card critic">
+                        <div class="hologram-border"></div>
+                        <div class="card-inner">
+                            <h3>CRITIC</h3>
+                            <select class="model-select" id="critic-select">
+                                <option value="Mistral" selected>MISTRAL</option>
+                                <option value="Kimi">KIMI</option>
+                                <option value="GPT">GPT-4O</option>
+                                <option value="Claude">CLAUDE</option>
+                            </select>
+                            <div class="paint-icon mouth"></div>
+                            <div class="state idle">STANDBY</div>
+                        </div>
+                    </div>
+                    <div class="card tactician">
+                        <div class="hologram-border"></div>
+                        <div class="card-inner">
+                            <h3>TACTICIAN</h3>
+                            <select class="model-select" id="tactician-select">
+                                <option value="DeepSeek" selected>DEEPSEEK</option>
+                                <option value="Mistral">MISTRAL</option>
+                                <option value="GPT">GPT-4O</option>
+                                <option value="Claude">CLAUDE</option>
+                            </select>
+                            <div class="paint-icon hatchet"></div>
+                            <div class="state idle">STANDBY</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="middle-row">
+                <!-- Swarm Commerce -->
+                <section class="module swarm-builder">
+                    <div class="module-header">
+                        <h2>SWARM COMMERCE</h2>
+                        <div class="neon-line purple"></div>
+                    </div>
+                    <div class="task-list" id="dynamic-task-list">
+                        <div class="task-row" style="opacity:0.4;font-size:0.8rem;border-left:none;">
+                            <span>> Global Swarm Tasks appear here...</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Console & Completions -->
+                <section class="module console-terminal" style="display: flex; flex-direction: column;">
+                    <div class="module-header">
+                        <h2>DARK CARNIVAL COMM-LINK</h2>
+                        <div class="neon-line red"></div>
+                    </div>
+
+                    <button class="hatchet-btn" id="init-btn" style="margin-top: 1rem;">INITIATE GLOBAL EVENT <span
+                            class="shard"></span></button>
+
+                    <div id="terminals-grid" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem;">
+                        <div class="terminal-window" id="terminal-main"
+                            style="flex: 1 1 100%; min-width: 300px; height: 150px; overflow-y: auto; position: relative; padding-top: 2rem;">
+                            <div
+                                style="position: absolute; top:0; left:0; right:0; background: var(--riddle-green); color: black; font-weight: bold; padding: 2px 10px; font-size: 0.8rem; display: flex; justify-content: space-between;">
+                                <span>tmux: [ringmaster_hub]</span>
+                                <span>bash</span>
+                            </div>
+                            <div class="log-line">> The Hub is ready.</div>
+                            <div class="cursor">_</div>
+                        </div>
+                    </div>
+
+                    <div class="module-header" style="margin-top: 2rem;">
+                        <h2>COMPLETIONS &amp; COGNITION</h2>
+                        <div class="neon-line green"></div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                        <div class="files-panel"
+                            style="flex: 1; background: rgba(0,0,0,0.8); border: 1px solid var(--riddle-green); padding: 1rem; color: #fff;">
+                            <h4 style="color: var(--riddle-green); margin-top: 0;">_ VAULT: /completions/</h4>
+                            <button class="hatchet-btn"
+                                style="padding: 0.5rem; font-size: 0.8rem; margin-bottom: 1rem; border-color: var(--riddle-green); color: var(--riddle-green);">REFRESH</button>
+                            <ul id="file-list"
+                                style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
+                                <li>> Global Vault aggregate.</li>
+                            </ul>
+                        </div>
+                        <div class="learning-panel"
+                            style="flex: 2; background: rgba(0,0,0,0.8); border: 1px solid var(--milenko-purple); padding: 1rem; color: #fff; overflow-y: auto; max-height: 250px;"
+                            id="learning-output">
+                            <h4 style="color: var(--milenko-purple); margin-top: 0;">_ META-COGNITION LOG</h4>
+                            <div class="log-line">> Listening for node cognition broadcasts...</div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
 
         <!-- The Universal Matrix Waterfall Feed -->
         <aside class="global-terminal">

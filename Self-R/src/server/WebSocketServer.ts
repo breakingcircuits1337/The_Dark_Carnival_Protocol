@@ -61,7 +61,10 @@ function registerWithRingmaster(port: number, role: string, ringmasterUrl: strin
 export function startUIServer(port: number = 8080, role: string = 'CORE', ringmasterUrl: string = 'http://192.168.1.124:8000') {
     const app = express();
     const server = createServer(app);
-    const io = new Server(server, { cors: { origin: '*' } });
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : [`http://localhost:${port}`];
+    const io = new Server(server, { cors: { origin: allowedOrigins } });
 
     ioInstance = io;
 
@@ -88,16 +91,22 @@ export function startUIServer(port: number = 8080, role: string = 'CORE', ringma
 
     app.get('/api/completions/:filename', (req, res) => {
         try {
-            const file = path.join(completionsDir, req.params.filename);
-            if (fs.existsSync(file)) res.sendFile(file);
+            const safe = path.resolve(completionsDir, path.basename(req.params.filename));
+            if (!safe.startsWith(path.resolve(completionsDir) + path.sep)) {
+                return res.status(400).json({ error: 'Invalid filename' });
+            }
+            if (fs.existsSync(safe)) res.sendFile(safe);
             else res.status(404).send('Not found');
         } catch (e: any) { res.status(500).json({ error: e.toString() }); }
     });
 
     app.delete('/api/completions/:filename', (req, res) => {
         try {
-            const file = path.join(completionsDir, req.params.filename);
-            if (fs.existsSync(file)) fs.unlinkSync(file);
+            const safe = path.resolve(completionsDir, path.basename(req.params.filename));
+            if (!safe.startsWith(path.resolve(completionsDir) + path.sep)) {
+                return res.status(400).json({ error: 'Invalid filename' });
+            }
+            if (fs.existsSync(safe)) fs.unlinkSync(safe);
             res.json({ success: true });
         } catch (e: any) { res.status(500).json({ error: e.toString() }); }
     });
@@ -163,11 +172,15 @@ Output strictly JSON, no markdown.`;
             const { objective = 'Improve code quality and correctness' } = req.body;
             broadcastLog('MetaLayer', `Self-rewrite cycle triggered: ${objective}`);
             // Trigger the Python meta layer via child process
-            const { exec } = await import('child_process');
+            const { execFile } = await import('child_process');
             const { promisify } = await import('util');
-            const execAsync = promisify(exec);
+            const execFileAsync = promisify(execFile);
             const metaScript = path.join(process.cwd(), 'src/meta/core.py');
-            const { stdout, stderr } = await execAsync(`python3 ${metaScript} --root ${process.cwd()} --json --objective "${objective.replace(/"/g, '\'')}"`).catch(e => ({ stdout: '', stderr: e.message }));
+            const { stdout, stderr } = await execFileAsync(
+                'python3',
+                [metaScript, '--root', process.cwd(), '--json', '--objective', objective],
+                { timeout: 120000 }
+            ).catch((e: any) => ({ stdout: '', stderr: e.message }));
             if (stderr && !stdout) return res.status(500).json({ error: stderr });
             const report = JSON.parse(stdout);
             broadcastLog('MetaLayer', `Self-analysis complete: ${report.proposals?.length || 0} proposals generated.`);

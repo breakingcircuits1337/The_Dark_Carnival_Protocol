@@ -5,12 +5,15 @@ import { memoryEngine } from '../memory/MemoryEngine';
 import { broadcastLog } from '../server/WebSocketServer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
+import * as os from 'os';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
+import { randomUUID } from 'crypto';
 import { HiveMind } from './HiveMind';
 import { SelfImprovementEngine } from '../services/SelfImprovementEngine';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface SwarmTask {
     name: string;
@@ -64,12 +67,12 @@ export class SwarmBuilder {
                         throw new Error(`LLM returned an error instead of a command: ${finalCmd.substring(0, 100)}`);
                     }
 
-                    const sessionName = `swarm_${task.provider.toLowerCase()}_${Date.now()}`;
-                    const safeCmd = finalCmd.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-                    const tmuxCmd = `tmux new-session -d -s ${sessionName} "bash -c \\"${safeCmd}\\""`;
+                    const sessionName = `swarm_${task.provider.toLowerCase()}_${randomUUID().slice(0, 8)}`;
+                    const scriptFile = path.join(os.tmpdir(), `${sessionName}.sh`);
+                    fs.writeFileSync(scriptFile, `#!/bin/bash\n${finalCmd}\n`, { mode: 0o700 });
 
                     broadcastLog(task.provider, `Deploying tmux session [${sessionName}]`);
-                    await execAsync(tmuxCmd);
+                    await execFileAsync('tmux', ['new-session', '-d', '-s', sessionName, scriptFile]);
 
                     console.log(chalk.green(`✓ [${task.provider}] Shell task deployed: ${task.name}`));
                     broadcastLog(task.provider, `✓ Shell task complete: ${task.name}`);
@@ -105,7 +108,7 @@ export class SwarmBuilder {
                     const baseName = path.basename(task.filename);
                     const nameWithoutExt = baseName.replace(/\.[^.]+$/, '');
                     const ext = path.extname(baseName);
-                    const safeFilename = `${nameWithoutExt}_${Date.now()}${ext}`;
+                    const safeFilename = `${nameWithoutExt}_${randomUUID()}${ext}`;
                     const outPath = path.join(process.cwd(), 'completions', safeFilename);
 
                     fs.mkdirSync(path.dirname(outPath), { recursive: true });

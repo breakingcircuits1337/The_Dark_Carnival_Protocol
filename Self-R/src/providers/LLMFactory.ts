@@ -19,6 +19,7 @@ export class ClaudesonProvider implements LLMProvider {
         const response = await fetch('http://127.0.0.1:8000/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(120000),
             body: JSON.stringify({
                 model: 'claudeson-2026',
                 messages: [
@@ -55,6 +56,7 @@ export class KimiProvider implements LLMProvider {
                 'Content-Type': 'application/json',
                 'api-key': apiKey
             },
+            signal: AbortSignal.timeout(120000),
             body: JSON.stringify({
                 messages: [
                     { role: 'system', content: context },
@@ -106,95 +108,15 @@ export class OpenAIProvider implements LLMProvider {
     name = 'GPT';
 
     async generateResponse(prompt: string, context: string = ''): Promise<string> {
-        try {
-            // Azure Route for GPT-4o on resource 9257
-            if (process.env.AZURE_GPT4O_ENDPOINT && process.env.AZURE_GPT4O_KEY) {
-                const response = await fetch(process.env.AZURE_GPT4O_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'api-key': process.env.AZURE_GPT4O_KEY
-                    },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: 'system', content: context },
-                            { role: 'user', content: prompt }
-                        ],
-                        max_tokens: 4096,
-                        temperature: 0.7
-                    })
-                });
-
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Azure GPT-4o HTTP ${response.status}: ${errText}`);
-                }
-
-                const data = await response.json();
-                return data.choices[0].message.content || '';
-            }
-
-            // Azure Route for GPT-4.1 on resource 1334
-            if (process.env.AZURE_GPT41_ENDPOINT && process.env.AZURE_API_KEY) {
-                const response = await fetch(process.env.AZURE_GPT41_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'api-key': process.env.AZURE_API_KEY
-                    },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: 'system', content: context },
-                            { role: 'user', content: prompt }
-                        ],
-                        max_tokens: 4096,
-                        temperature: 0.7
-                    })
-                });
-
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Azure GPT-4.1 HTTP ${response.status}: ${errText}`);
-                }
-
-                const data = await response.json();
-                return data.choices[0].message.content || '';
-            }
-
-            // Fallback Official OpenAI Route
-            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
-            const completion = await openai.chat.completions.create({
-                messages: [
-                    { role: 'system', content: context },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'gpt-4o',
-            });
-            return completion.choices[0].message.content || '';
-        } catch (error) {
-            return chalk.red(`[GPT Error]: ${error}`);
-        }
-    }
-}
-
-export class DeepSeekProvider implements LLMProvider {
-    name = 'DeepSeek';
-
-    async generateResponse(prompt: string, context: string = ''): Promise<string> {
-        try {
-            const endpoint = process.env.DEEPSEEK_ENDPOINT;
-            const apiKey = process.env.AZURE_API_KEY;
-
-            if (!endpoint || !apiKey) {
-                throw new Error("DEEPSEEK_ENDPOINT and AZURE_API_KEY must be set in .env");
-            }
-
-            const response = await fetch(endpoint, {
+        // Azure Route for GPT-4o on resource 9257
+        if (process.env.AZURE_GPT4O_ENDPOINT && process.env.AZURE_GPT4O_KEY) {
+            const response = await fetch(process.env.AZURE_GPT4O_ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'api-key': apiKey
+                    'api-key': process.env.AZURE_GPT4O_KEY
                 },
+                signal: AbortSignal.timeout(120000),
                 body: JSON.stringify({
                     messages: [
                         { role: 'system', content: context },
@@ -207,14 +129,89 @@ export class DeepSeekProvider implements LLMProvider {
 
             if (!response.ok) {
                 const errText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errText}`);
+                throw new Error(`[GPT] Azure GPT-4o HTTP ${response.status}: ${errText}`);
             }
 
             const data = await response.json();
             return data.choices[0].message.content || '';
-        } catch (error) {
-            return chalk.red(`[DeepSeek Error]: ${error}`);
         }
+
+        // Azure Route for GPT-4.1 on resource 1334
+        if (process.env.AZURE_GPT41_ENDPOINT && process.env.AZURE_API_KEY) {
+            const response = await fetch(process.env.AZURE_GPT41_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': process.env.AZURE_API_KEY
+                },
+                signal: AbortSignal.timeout(120000),
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: context },
+                        { role: 'user', content: prompt }
+                    ],
+                    max_tokens: 4096,
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`[GPT] Azure GPT-4.1 HTTP ${response.status}: ${errText}`);
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content || '';
+        }
+
+        // Fallback Official OpenAI Route
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
+        const completion = await openai.chat.completions.create({
+            messages: [
+                { role: 'system', content: context },
+                { role: 'user', content: prompt }
+            ],
+            model: 'gpt-4o',
+        });
+        return completion.choices[0].message.content || '';
+    }
+}
+
+export class DeepSeekProvider implements LLMProvider {
+    name = 'DeepSeek';
+
+    async generateResponse(prompt: string, context: string = ''): Promise<string> {
+        const endpoint = process.env.DEEPSEEK_ENDPOINT;
+        const apiKey = process.env.AZURE_API_KEY;
+
+        if (!endpoint || !apiKey) {
+            throw new Error('[DeepSeek] DEEPSEEK_ENDPOINT and AZURE_API_KEY must be set in .env');
+        }
+
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'api-key': apiKey
+            },
+            signal: AbortSignal.timeout(120000),
+            body: JSON.stringify({
+                messages: [
+                    { role: 'system', content: context },
+                    { role: 'user', content: prompt }
+                ],
+                max_tokens: 4096,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`[DeepSeek] HTTP ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content || '';
     }
 }
 
@@ -238,50 +235,47 @@ export class MistralProvider implements LLMProvider {
     name = 'Mistral';
 
     async generateResponse(prompt: string, context: string = ''): Promise<string> {
-        try {
-            // Route to Azure AI Foundry if environment is configured
-            if (process.env.MISTRAL_ENDPOINT && process.env.AZURE_API_KEY) {
-                const response = await fetch(process.env.MISTRAL_ENDPOINT, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'api-key': process.env.AZURE_API_KEY
-                    },
-                    body: JSON.stringify({
-                        messages: [
-                            { role: 'system', content: context },
-                            { role: 'user', content: prompt }
-                        ],
-                        max_tokens: 4096,
-                        temperature: 0.7
-                    })
-                });
-
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`Azure HTTP ${response.status}: ${errText}`);
-                }
-
-                const data = await response.json();
-                return data.choices[0].message.content || '';
-            } else {
-                // Fallback to official Mistral cloud API via OpenAI proxy format
-                const openai = new OpenAI({
-                    apiKey: process.env.MISTRAL_API_KEY || '',
-                    baseURL: 'https://api.mistral.ai/v1'
-                });
-                const completion = await openai.chat.completions.create({
+        // Route to Azure AI Foundry if environment is configured
+        if (process.env.MISTRAL_ENDPOINT && process.env.AZURE_API_KEY) {
+            const response = await fetch(process.env.MISTRAL_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'api-key': process.env.AZURE_API_KEY
+                },
+                signal: AbortSignal.timeout(120000),
+                body: JSON.stringify({
                     messages: [
                         { role: 'system', content: context },
                         { role: 'user', content: prompt }
                     ],
-                    model: 'mistral-large-latest',
-                });
-                return completion.choices[0].message.content || '';
+                    max_tokens: 4096,
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`[Mistral] Azure HTTP ${response.status}: ${errText}`);
             }
-        } catch (error) {
-            return chalk.red(`[Mistral Error]: ${error}`);
+
+            const data = await response.json();
+            return data.choices[0].message.content || '';
         }
+
+        // Fallback to official Mistral cloud API via OpenAI proxy format
+        const openai = new OpenAI({
+            apiKey: process.env.MISTRAL_API_KEY || '',
+            baseURL: 'https://api.mistral.ai/v1'
+        });
+        const completion = await openai.chat.completions.create({
+            messages: [
+                { role: 'system', content: context },
+                { role: 'user', content: prompt }
+            ],
+            model: 'mistral-large-latest',
+        });
+        return completion.choices[0].message.content || '';
     }
 }
 

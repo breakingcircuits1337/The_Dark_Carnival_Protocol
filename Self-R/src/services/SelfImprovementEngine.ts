@@ -12,13 +12,14 @@
  *  - POST /api/self-improve endpoint (manual trigger via Ringmaster Hub)
  */
 
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { broadcastLog } from '../server/WebSocketServer';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 export interface ImprovementResult {
     filename: string;
@@ -214,34 +215,42 @@ export class SelfImprovementEngine {
      *   True if all safety gates pass, false otherwise.
      */
     private async runPythonValidation(filename: string, original: string, proposed: string): Promise<boolean> {
-        const validationScript = path.join(this.projectRoot, 'src/meta/validation.py');
-        const tmpOriginal = path.join(this.projectRoot, `_tmp_orig_${Date.now()}.txt`);
-        const tmpProposed = path.join(this.projectRoot, `_tmp_prop_${Date.now()}.txt`);
+        const id = randomUUID();
+        const tmpOriginal = path.join(this.projectRoot, `_tmp_orig_${id}.txt`);
+        const tmpProposed = path.join(this.projectRoot, `_tmp_prop_${id}.txt`);
+
+        // Python code contains NO user-controlled data — all values arrive via env vars.
+        const validationRunner = `
+import sys, os
+sys.path.insert(0, os.environ['_V_META'])
+from validation import RewriteValidator
+v = RewriteValidator(os.environ['_V_ROOT'])
+orig = open(os.environ['_V_ORIG']).read()
+prop = open(os.environ['_V_PROP']).read()
+ok, reasons = v.validate(os.environ['_V_FILE'], orig, prop)
+print('PASS' if ok else 'FAIL')
+for r in reasons: print(r)
+`.trim();
 
         try {
             fs.writeFileSync(tmpOriginal, original, 'utf8');
             fs.writeFileSync(tmpProposed, proposed, 'utf8');
 
-            const validationRunner = `
-import sys
-sys.path.insert(0, '${this.projectRoot}/src/meta')
-from validation import RewriteValidator
-v = RewriteValidator('${this.projectRoot.replace(/\\/g, '/')}')
-orig = open('${tmpOriginal.replace(/\\/g, '/')}').read()
-prop = open('${tmpProposed.replace(/\\/g, '/')}').read()
-ok, reasons = v.validate('${filename}', orig, prop)
-print('PASS' if ok else 'FAIL')
-for r in reasons: print(r)
-`.trim();
-
-            const { stdout } = await execAsync(`python3 -c "${validationRunner.replace(/"/g, '\\"')}"`, {
+            const { stdout } = await execFileAsync('python3', ['-c', validationRunner], {
                 cwd: this.projectRoot,
                 timeout: 30000,
+                env: {
+                    ...process.env,
+                    _V_META: path.join(this.projectRoot, 'src/meta'),
+                    _V_ROOT: this.projectRoot,
+                    _V_ORIG: tmpOriginal,
+                    _V_PROP: tmpProposed,
+                    _V_FILE: filename,
+                },
             });
 
             return stdout.trim().startsWith('PASS');
         } catch (e) {
-            // If Python validation unavailable, log and skip (fail-safe)
             broadcastLog('SelfImprove', `⚠ Python validation unavailable: ${e}. Skipping patch.`);
             return false;
         } finally {

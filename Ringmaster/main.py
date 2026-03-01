@@ -13,10 +13,12 @@ from typing import List, Dict, Any, Optional
 
 app = FastAPI(title="Self-R Ringmaster")
 
+_raw_origins = os.environ.get("ALLOWED_ORIGINS", "")
+_allowed_origins: List[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=(_allowed_origins != ["*"]),
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -145,7 +147,7 @@ async def dispatch_swarm(payload: SwarmTaskPayload):
                     active_nodes[target_id]["status"] = "AWAITING HUMAN"
                     await broadcast_to_ui({"type": "node_update", "nodes": list(active_nodes.values())})
             except Exception as e:
-                print(f"Failed to dispatch to {target_url}: {e}")
+                await broadcast_to_ui({"type": "terminal_log", "node_id": "RINGMASTER", "log": f"> ✗ Dispatch to {target_id} failed: {e}"})
                 if target_id in active_nodes:
                     active_nodes[target_id]["status"] = "ERROR"
                     await broadcast_to_ui({"type": "node_update", "nodes": list(active_nodes.values())})
@@ -280,10 +282,16 @@ async def websocket_endpoint(websocket: WebSocket):
         ui_connections.remove(websocket)
 
 async def broadcast_to_ui(message: dict):
+    dead = []
     for connection in ui_connections:
         try:
             await connection.send_json(message)
-        except:
+        except Exception:
+            dead.append(connection)
+    for conn in dead:
+        try:
+            ui_connections.remove(conn)
+        except ValueError:
             pass
 
 

@@ -6,7 +6,7 @@ export class MemoryEngine {
     private connected: boolean = false;
 
     constructor() {
-        this.redisClient = createClient({ url: "redis://localhost:6379" });
+        this.redisClient = createClient({ url: process.env.REDIS_URL || "redis://localhost:6379" });
         this.redisClient.connect()
             .then(() => { this.connected = true; })
             .catch((e: unknown) => console.log("[MemoryEngine] Redis unavailable (short-term memory disabled):", e));
